@@ -16,6 +16,7 @@ dependencies:
   geolocator: ^12.0.0            # un solo GPS fix, precisione "bilanciata"
   url_launcher: ^6.3.0           # «Portami qui» apre il navigatore di sistema
   maplibre_gl: ^0.26.0           # mappa vettoriale (pag. 6, 10); tile OpenFreeMap
+  shared_preferences: ^2.3.0     # persistenza locale delle impostazioni
   # Archivio locale: il PDF indica "Drift o Isar". Scelta rimandata alla Tappa 03;
   # per lo scheletro basta la cache su file (data/local_store.dart).
 

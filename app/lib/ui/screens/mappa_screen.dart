@@ -7,6 +7,9 @@
 // è sovrapposto ma in colonna sotto la mappa, e si ridimensiona dalla sua maniglia
 // (trascinamento o tocco). Su mobile l'effetto è comunque un pannello che cresce/cala.
 
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,9 +22,13 @@ import '../../domain/geo.dart';
 import '../../domain/geojson.dart';
 import '../../domain/risparmio.dart';
 import '../../models/impianto.dart';
+import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
+import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
 import '../components/scheda_impianto.dart';
+import 'impostazioni_screen.dart';
+import 'segnala_sheet.dart';
 
 const _sorgente = 'prezzi';
 const _layers = ['prezzi-testo', 'prezzi-migliore'];
@@ -39,6 +46,9 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   String? _stile;
   bool _stilePronto = false;
   double _altezzaFoglio = 300;
+  bool _movimentoProgrammatico = false;
+  bool _mostraCerca = false;
+  String? _provinciaCentrata; // per ricentrare solo al cambio di provincia
 
   @override
   void initState() {
@@ -72,37 +82,77 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       ),
     );
 
+    // Sorgente con raggruppamento: sotto lo zoom 12 i punti si raggruppano e il cluster
+    // mostra il minimo della zona (pag. 13: "da 2,059", non il conteggio).
     await c.addSource(
       _sorgente,
-      const GeojsonSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
+      const GeojsonSourceProperties(
+        data: {'type': 'FeatureCollection', 'features': []},
+        cluster: true,
+        clusterMaxZoom: 12,
+        clusterRadius: 60,
+        clusterProperties: {
+          'min': ['min', ['get', 'prezzoNum']],
+        },
+      ),
     );
+    // Pillole come sfondo dei prezzi (pag. 6): bianca 94% per i normali, gradiente
+    // menta con alone per il più conveniente. I prezzi hanno larghezza costante
+    // ("X,XXX"), quindi una pillola a misura fissa non si deforma.
+    await c.addImage('pill-bianca', await _pill(w: 66, h: 32, menta: false, bordo: true));
+    await c.addImage('pill-menta', await _pill(w: 78, h: 38, menta: true, alone: true));
+    await c.addImage('pill-cluster', await _pill(w: 92, h: 34, menta: true));
+
+    // Marcatori non raggruppati (hanno prezzo solo i punti singoli).
     await c.addSymbolLayer(
       _sorgente,
       'prezzi-testo',
       const SymbolLayerProperties(
+        iconImage: 'pill-bianca',
+        iconAllowOverlap: false,
         textField: '{prezzo}',
         textSize: 15,
         textFont: ['Noto Sans Regular'],
         textColor: '#0E1620',
-        textHaloColor: '#FFFFFF',
-        textHaloWidth: 1.6,
+        textOffset: [0, -0.28],
         textAllowOverlap: false,
       ),
-      filter: ['!=', ['get', 'migliore'], true],
+      filter: ['all', ['!=', ['get', 'migliore'], true], ['!', ['has', 'point_count']]],
     );
     await c.addSymbolLayer(
       _sorgente,
       'prezzi-migliore',
       const SymbolLayerProperties(
+        iconImage: 'pill-menta',
+        iconAllowOverlap: true,
         textField: '{prezzo}',
         textSize: 17,
         textFont: ['Noto Sans Regular'],
-        textColor: '#00806F',
-        textHaloColor: '#FFFFFF',
-        textHaloWidth: 2.2,
+        textColor: '#FFFFFF',
+        textOffset: [0, -0.24],
         textAllowOverlap: true,
       ),
-      filter: ['==', ['get', 'migliore'], true],
+      filter: ['all', ['==', ['get', 'migliore'], true], ['!', ['has', 'point_count']]],
+    );
+    // Cluster: pillola menta con il prezzo minimo della zona ("da 1,8xx").
+    await c.addSymbolLayer(
+      _sorgente,
+      'cluster-testo',
+      const SymbolLayerProperties(
+        iconImage: 'pill-cluster',
+        iconAllowOverlap: true,
+        textField: [
+          'concat',
+          'da ',
+          ['number-format', ['get', 'min'], {'locale': 'it-IT', 'min-fraction-digits': 3, 'max-fraction-digits': 3}],
+        ],
+        textFont: ['Noto Sans Regular'],
+        textSize: 13,
+        textColor: '#FFFFFF',
+        textOffset: [0, -0.3],
+        textAllowOverlap: true,
+      ),
+      filter: ['has', 'point_count'],
     );
     _stilePronto = true;
     c.onFeatureTapped.add((point, latLng, featureId, layerId, annotation) {
@@ -140,14 +190,26 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   Future<void> _aggiornaSorgente() async {
     final c = _controller;
     if (c == null || !_stilePronto) return;
-    final dati = ref.read(datiProvinciaProvider).valueOrNull?.dati;
-    if (dati == null) return;
+    final marcatori = ref.read(marcatoriProvider);
     final carburante = ref.read(carburanteProvider);
-    final ordinati = ordinaPerPrezzo(dati.impianti, carburante);
-    final idMigliore = ordinati.isNotEmpty ? ordinati.first.id : null;
-    final geo = geoJsonPrezzi(dati.impianti, carburante, idMigliore: idMigliore);
+    if (marcatori.isEmpty) {
+      await c.setGeoJsonSource(_sorgente, {'type': 'FeatureCollection', 'features': []});
+      return;
+    }
+    // Il marcatore "migliore" (pillola menta) è il primo secondo il criterio scelto
+    // (prezzo, bilanciato o distanza): così la mappa reagisce al cambio di ordinamento.
+    final ord = ref.read(ordinamentoProvider);
+    final pos = ref.read(posizioneProvider).valueOrNull;
+    final ordinati = ordina(marcatori, carburante, ord, pos);
+    final geo = geoJsonPrezzi(marcatori, carburante, idMigliore: ordinati.first.id);
     await c.setGeoJsonSource(_sorgente, geo);
-    _centra(ordinati);
+
+    // Ricentra solo quando cambia la provincia (non a ogni cambio di ordinamento).
+    final provincia = ref.read(provinciaProvider);
+    if (provincia != _provinciaCentrata) {
+      _centra(ordinati);
+      _provinciaCentrata = provincia;
+    }
   }
 
   void _centra(List<Impianto> ordinati) {
@@ -157,19 +219,48 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final target = pos != null
         ? LatLng(pos.lat, pos.lon)
         : LatLng(ordinati.first.lat ?? 41.9, ordinati.first.lon ?? 12.5);
+    _movimentoProgrammatico = true;
     c.animateCamera(CameraUpdate.newLatLngZoom(target, 11));
   }
 
   void _vaiAllaPosizione() {
     final pos = ref.read(posizioneProvider).valueOrNull;
     if (pos != null) {
+      _movimentoProgrammatico = true;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(LatLng(pos.lat, pos.lon), 13));
     }
   }
 
+  // La mappa si è fermata: se il movimento è dell'utente, offri "Cerca in questa zona".
+  void _onCameraIdle() {
+    if (_movimentoProgrammatico) {
+      _movimentoProgrammatico = false;
+      return;
+    }
+    if (mounted && !_mostraCerca) setState(() => _mostraCerca = true);
+  }
+
+  // Passa alla provincia il cui baricentro è più vicino al centro mappa corrente.
+  void _cercaInQuestaZona() {
+    setState(() => _mostraCerca = false);
+    final centro = _controller?.cameraPosition?.target;
+    final manifest = ref.read(manifestProvider).valueOrNull;
+    if (centro == null || manifest == null) return;
+    final sigla = manifest.provinciaPiuVicina(centro.latitude, centro.longitude);
+    if (sigla != null) ref.read(provinciaSceltaProvider.notifier).state = sigla;
+  }
+
   Future<void> _portamiQui(Impianto i) async {
     if (i.lat == null || i.lon == null) return;
-    final ok = await portamiQui(i.lat!, i.lon!);
+    // Prepara il ritorno dopo il rifornimento.
+    final prezzo = i.prezzoDi(ref.read(carburanteProvider))?.valore ?? 0;
+    ref.read(rientroProvider.notifier).state = Rientro(
+      impiantoId: i.id,
+      nome: i.nome,
+      prezzoMostrato: prezzo,
+      quando: DateTime.now(),
+    );
+    final ok = await portamiQui(i.lat!, i.lon!, navigatore: ref.read(navigatoreProvider));
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossibile aprire il navigatore.')),
@@ -179,9 +270,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(datiProvinciaProvider, (_, __) => _aggiornaSorgente());
-    ref.listen(carburanteProvider, (_, __) => _aggiornaSorgente());
-    ref.listen(posizioneProvider, (_, __) => _aggiornaPosizione());
+    ref.listen(marcatoriProvider, (_, __) => _aggiornaSorgente());
+    ref.listen(ordinamentoProvider, (_, __) => _aggiornaSorgente());
+    ref.listen(posizioneProvider, (_, __) {
+      _aggiornaPosizione();
+      _aggiornaSorgente();
+    });
 
     if (_stile == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -200,12 +294,45 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
                         const CameraPosition(target: LatLng(41.9, 12.5), zoom: 5),
                     onMapCreated: (c) => _controller = c,
                     onStyleLoadedCallback: _onStyleLoaded,
+                    onCameraIdle: _onCameraIdle,
+                    trackCameraPosition: true,
                     myLocationEnabled: false,
                     compassEnabled: false,
                     rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                   ),
                 ),
+                // Shortcut ordinamento in alto a sinistra (stile pillola in vetro).
+                const Positioned(
+                  top: 16,
+                  left: PienoSpacing.margineLaterale,
+                  child: OrdinamentoShortcut(),
+                ),
+                // "Cerca in questa zona": appare dopo che l'utente sposta la mappa;
+                // nessun ricaricamento automatico che sposta i risultati sotto il dito.
+                if (_mostraCerca)
+                  Positioned(
+                    top: 16,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Material(
+                        color: PienoColors.inchiostro,
+                        borderRadius: BorderRadius.circular(PienoRadii.pillola),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(PienoRadii.pillola),
+                          onTap: _cercaInQuestaZona,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            child: Text('Cerca in questa zona',
+                                style: PienoText.voceImpostazione
+                                    .copyWith(color: const Color(0xFFFFFFFF))),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   right: PienoSpacing.margineLaterale,
                   bottom: 24,
@@ -213,9 +340,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
                     children: [
                       PulsanteTondo(
                         icona: const Icon(Icons.tune, size: 22, color: PienoColors.inchiostro),
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Impostazioni: in arrivo (Tappa 05)')),
-                        ),
+                        onTap: () => Navigator.of(context).push(ImpostazioniScreen.rotta()),
                       ),
                       const SizedBox(height: 12),
                       PulsanteTondo(
@@ -236,10 +361,11 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   }
 
   Widget _foglio(double maxFoglio) {
-    final dati = ref.watch(datiProvinciaProvider).valueOrNull?.dati;
     final carburante = ref.watch(carburanteProvider);
+    final elenco = ref.watch(elencoProvider);
     final selId = ref.watch(selezionatoProvider);
     final pos = ref.watch(posizioneProvider).valueOrNull;
+    final capacita = ref.watch(capacitaLitriProvider);
 
     final altezza = _altezzaFoglio.clamp(_foglioMin, maxFoglio);
     return Container(
@@ -254,12 +380,18 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
           // Maniglia: trascinala (o toccala) per allargare/stringere il foglio.
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onVerticalDragUpdate: (d) => setState(() {
-              _altezzaFoglio = (_altezzaFoglio - d.delta.dy).clamp(_foglioMin, maxFoglio);
-            }),
-            onTap: () => setState(() {
-              _altezzaFoglio = _altezzaFoglio > (maxFoglio * 0.6) ? 300 : maxFoglio;
-            }),
+            onVerticalDragUpdate: (d) {
+              setState(() {
+                _altezzaFoglio = (_altezzaFoglio - d.delta.dy).clamp(_foglioMin, maxFoglio);
+              });
+              _sincronizzaEspanso(maxFoglio);
+            },
+            onTap: () {
+              setState(() {
+                _altezzaFoglio = _altezzaFoglio > (maxFoglio * 0.6) ? 300 : maxFoglio;
+              });
+              _sincronizzaEspanso(maxFoglio);
+            },
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -277,24 +409,21 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
             ),
           ),
           Expanded(
-            child: dati == null
-                ? const Center(child: Text('Nessun dato.'))
-                : _contenuto(dati.impianti, carburante, selId, pos),
+            child: elenco.isEmpty
+                ? const Center(child: Text('Nessun impianto in questa zona.'))
+                : _contenuto(elenco, carburante, selId, pos, capacita),
           ),
         ],
       ),
     );
   }
 
-  Widget _contenuto(List<Impianto> impianti, carburante, String? selId, pos) {
-    final ordinati = ordinaPerPrezzo(impianti, carburante);
-    if (ordinati.isEmpty) {
-      return const Center(child: Text('Nessun impianto con questo carburante.'));
-    }
+  Widget _contenuto(List<Impianto> ordinati, carburante, String? selId, pos, int capacita) {
     final media = mediaZona(ordinati, carburante);
     final selezionato = _trova(ordinati, selId) ?? ordinati.first;
     final prezzoSel = selezionato.prezzoDi(carburante)!.valore;
-    final risparmio = media == null ? 0.0 : risparmioSulPieno(prezzoSel, media);
+    final risparmio =
+        media == null ? 0.0 : risparmioSulPieno(prezzoSel, media, litri: capacita);
     final dist = (pos != null && selezionato.lat != null && selezionato.lon != null)
         ? distanzaKm(pos.lat, pos.lon, selezionato.lat!, selezionato.lon!)
         : null;
@@ -308,6 +437,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
           risparmioEuro: risparmio,
           distanzaKm: dist,
           onPortamiQui: () => _portamiQui(selezionato),
+          onSegnala: () => mostraSegnala(context, selezionato, prezzoSel),
           altezzaAzione: PienoSizes.bottoneFoglioMappa,
         ),
         const SizedBox(height: 18),
@@ -351,6 +481,76 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         ),
       ),
     );
+  }
+
+  // Disegna una pillola-marcatore come PNG: rettangolo arrotondato con coda a rombo.
+  // menta=false → bianca 94%; menta=true → gradiente menta (pag. 6).
+  // alone → alone radiale che isola il marcatore migliore; bordo → bordo bianco.
+  Future<Uint8List> _pill({
+    required double w,
+    required double h,
+    required bool menta,
+    bool alone = false,
+    bool bordo = false,
+  }) async {
+    const tail = 8.0;
+    final totH = h + tail;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    final rr = ui.RRect.fromRectAndRadius(
+      ui.Rect.fromLTWH(0, 0, w, h),
+      ui.Radius.circular(h / 2),
+    );
+    final fill = ui.Paint();
+    if (menta) {
+      if (alone) {
+        canvas.drawCircle(
+          ui.Offset(w / 2, h / 2),
+          w / 2,
+          ui.Paint()
+            ..color = const ui.Color(0x3300B39A)
+            ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 14),
+        );
+      }
+      fill.shader = ui.Gradient.linear(
+        const ui.Offset(0, 0),
+        ui.Offset(w, h),
+        const [ui.Color(0xFF00C2A6), ui.Color(0xFF00887E)],
+      );
+    } else {
+      fill.color = const ui.Color(0xF0FFFFFF); // bianco ~94%
+    }
+
+    // coda a rombo (punta in basso)
+    final cx = w / 2;
+    final tailPath = ui.Path()
+      ..moveTo(cx - tail, h - 2)
+      ..lineTo(cx, h - 2 + tail)
+      ..lineTo(cx + tail, h - 2)
+      ..close();
+    canvas.drawPath(tailPath, fill);
+    canvas.drawRRect(rr, fill);
+    if (bordo) {
+      canvas.drawRRect(
+        rr,
+        ui.Paint()
+          ..style = ui.PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = const ui.Color(0xE6FFFFFF),
+      );
+    }
+
+    final img = await recorder.endRecording().toImage(w.ceil(), totH.ceil());
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    return bytes!.buffer.asUint8List();
+  }
+
+  void _sincronizzaEspanso(double maxFoglio) {
+    final espanso = _altezzaFoglio > maxFoglio * 0.55;
+    if (ref.read(foglioEspansoProvider) != espanso) {
+      ref.read(foglioEspansoProvider.notifier).state = espanso;
+    }
   }
 
   Impianto? _trova(List<Impianto> lista, String? id) {

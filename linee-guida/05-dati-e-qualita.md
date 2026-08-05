@@ -53,7 +53,9 @@ La pubblicazione avviene su una nuova versione dei file e viene scambiata solo s
 
 - Dalla scheda impianto: «Segnala un prezzo errato» con il prezzo visto e, se l'utente vuole, la foto del totem.
 - Tre segnalazioni concordi entro 24 ore: il prezzo passa a «contestato», l'impianto scende in classifica e perde il badge di convenienza.
-- Verifica sul campo mensile a campione (100 impianti) per misurare l'errore, non stimarlo.
+- Verifica sul campo mensile a campione (100 impianti) per misurare l'errore, non stimarlo. **Processo (Tappa 06):** estrarre 100 impianti a campione, rilevare il prezzo reale al distributore, confrontarlo con quello mostrato dall'app, registrare lo scarto e alimentare la misura «scarto mediano < 0,01 €/l». Da eseguire prima di ogni rilascio.
+
+**Stato nell'app (Tappa 06).** La segnalazione «prezzo errato» è raccolta dalla scheda impianto e messa in **coda locale** (nessun backend ancora: l'invio e la regola delle tre conferme sono lato server). Il **ritorno dopo il rifornimento** è chiesto all'avvio successivo. La **pagina pubblica di qualità** è il report del job notturno (`report-qualita.md`), linkato dalle Impostazioni.
 
 ## Misure di controllo
 

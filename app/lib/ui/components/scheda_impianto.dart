@@ -1,7 +1,7 @@
 // Scheda principale (pag. 7): vetro bianco 72%, raggio 36, margine laterale 18.
 // Contiene sempre e solo: nome, via, distanza, prezzo, risparmio, azione.
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../models/carburante.dart';
@@ -19,6 +19,7 @@ class SchedaImpianto extends StatelessWidget {
     required this.risparmioEuro,
     required this.distanzaKm,
     required this.onPortamiQui,
+    this.onSegnala,
     this.altezzaAzione = PienoSizes.azionePrimaria,
   });
 
@@ -27,6 +28,7 @@ class SchedaImpianto extends StatelessWidget {
   final double risparmioEuro;
   final double? distanzaKm;
   final VoidCallback onPortamiQui;
+  final VoidCallback? onSegnala;
   final double altezzaAzione;
 
   @override
@@ -59,6 +61,15 @@ class SchedaImpianto extends StatelessWidget {
           PastigliaRisparmio(risparmioEuro: risparmioEuro),
           const SizedBox(height: 16),
           BottonePrimario(testo: 'Portami qui', onTap: onPortamiQui, altezza: altezzaAzione),
+          if (onSegnala != null)
+            Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                onPressed: onSegnala,
+                child: Text('Segnala un prezzo errato',
+                    style: PienoText.valoreDettaglio.copyWith(color: PienoColors.mentaScura)),
+              ),
+            ),
         ],
       ),
     );

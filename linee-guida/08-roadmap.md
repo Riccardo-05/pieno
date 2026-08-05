@@ -9,8 +9,10 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 | 01 · Dati | ✅ conclusa | Pipeline in `data-pipeline/`, validatore + report + job notturno. Dati pubblici su GitHub Pages: https://riccardo-05.github.io/pieno/manifest.json |
 | 02 · Scheletro dell'app | ✅ conclusa | Progetto Flutter in `app/`, verificato con `flutter run -d chrome` su dati veri. |
 | 03 · Vicino a te | ✅ conclusa | Schermata 3 completa: più conveniente, risparmio sul pieno, tre alternative, «Portami qui», stati vuoto/offline. Provata su Chrome. Provincia fissa a MI (vedi Tappa 04). |
-| 04 · Mappa | ⬜ da fare | Include la **selezione della provincia dalla posizione** (rinviata dalla Tappa 03): capire in che provincia si trova l'utente e caricare il file giusto. |
-| 05–07 | ⬜ da fare | — |
+| 04 · Mappa | ✅ conclusa | MapLibre + stile personalizzato, marcatori-pillola con collisioni e cluster, foglio inferiore, selezione condivisa, puntino posizione, «cerca in questa zona», provincia dalla posizione. |
+| 05 · Impostazioni e account | ✅ conclusa | Schermata 4 (cinque gruppi) e Schermata 1 (accesso/registrazione/«entra senza account»). Impostazioni **funzionanti**: carburante, navigatore, ordinamento (3 vie), raggio, capacità serbatoio, escludi età — tutte persistite localmente. Manca solo la sincronizzazione (serve backend account). |
+| 06 · Fiducia | ✅ conclusa (lato app) | Segnalazione prezzo errato (coda locale), ritorno dopo il rifornimento. Lato server/processo (regola tre conferme, notifiche push, audit sul campo) documentato, da eseguire. |
+| 07 · Prova e rilascio | 🔨 materiali pronti | Documenti in `rilascio/` (privacy, scheda store, piano test). Nome app «Pieno» impostato. Restano da fare da te: account sviluppatore, prova utenti/campo, cambio bundle id, build e upload (Android → iOS). |
 
 ## 01 · Dati — 2–3 settimane
 

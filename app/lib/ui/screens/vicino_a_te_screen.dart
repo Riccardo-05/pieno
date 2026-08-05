@@ -16,9 +16,14 @@ import '../../models/impianto.dart';
 import '../../state/app_state.dart';
 import '../components/carburante_pillola.dart';
 import '../components/chip_alternativa.dart';
+import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
+import '../../models/navigatore.dart';
+import '../../models/segnalazione.dart';
 import '../components/scheda_impianto.dart';
 import '../components/sfondo_aurore.dart';
+import 'impostazioni_screen.dart';
+import 'segnala_sheet.dart';
 
 class VicinoATeScreen extends ConsumerWidget {
   const VicinoATeScreen({super.key});
@@ -28,6 +33,9 @@ class VicinoATeScreen extends ConsumerWidget {
     final carburante = ref.watch(carburanteProvider);
     final async = ref.watch(datiProvinciaProvider);
     final pos = ref.watch(posizioneProvider).valueOrNull;
+    final elenco = ref.watch(elencoProvider);
+    final capacita = ref.watch(capacitaLitriProvider);
+    final nav = ref.watch(navigatoreProvider);
 
     return Scaffold(
       body: SfondoAurore(
@@ -40,7 +48,7 @@ class VicinoATeScreen extends ConsumerWidget {
             child: async.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _statoSenzaConnessione(),
-              data: (esito) => _contenuto(context, ref, esito, carburante, pos),
+              data: (esito) => _contenuto(context, ref, esito, carburante, pos, elenco, capacita, nav),
             ),
           ),
         ),
@@ -49,21 +57,22 @@ class VicinoATeScreen extends ConsumerWidget {
   }
 
   Widget _contenuto(BuildContext context, WidgetRef ref, EsitoDati esito,
-      Carburante carburante, Posizione? pos) {
+      Carburante carburante, Posizione? pos, List<Impianto> elenco, int capacita, Navigatore nav) {
     final dati = esito.dati;
     if (dati == null) return _statoSenzaConnessione();
 
-    final ordinati = ordinaPerPrezzo(dati.impianti, carburante);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _rigaContesto(context, ref, dati, esito.origineRete, carburante),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        const Align(alignment: Alignment.centerLeft, child: OrdinamentoShortcut()),
+        const SizedBox(height: 12),
         if (!esito.origineRete) _bannerOffline(dati),
         Expanded(
-          child: ordinati.isEmpty
+          child: elenco.isEmpty
               ? _statoSenzaRisultati(carburante)
-              : _elenco(context, ordinati, carburante, pos),
+              : _elenco(context, ref, elenco, carburante, pos, nav, capacita),
         ),
       ],
     );
@@ -96,19 +105,19 @@ class VicinoATeScreen extends ConsumerWidget {
         PulsanteTondo(
           diametro: PienoSizes.pulsanteTondoElenco,
           icona: const Icon(Icons.tune, size: 20, color: PienoColors.inchiostro),
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Impostazioni: in arrivo (Tappa 05)')),
-          ),
+          onTap: () => Navigator.of(context).push(ImpostazioniScreen.rotta()),
         ),
       ],
     );
   }
 
-  Widget _elenco(BuildContext context, List<Impianto> ordinati, Carburante c, Posizione? pos) {
+  Widget _elenco(BuildContext context, WidgetRef ref, List<Impianto> ordinati, Carburante c,
+      Posizione? pos, Navigatore nav, int capacita) {
     final media = mediaZona(ordinati, c);
     final migliore = ordinati.first;
     final prezzoMigliore = migliore.prezzoDi(c)!.valore;
-    final risparmio = media == null ? 0.0 : risparmioSulPieno(prezzoMigliore, media);
+    final risparmio =
+        media == null ? 0.0 : risparmioSulPieno(prezzoMigliore, media, litri: capacita);
 
     // Massimo tre alternative sotto la scheda principale (regola da non violare).
     final alternative = ordinati.skip(1).take(3).toList();
@@ -120,7 +129,11 @@ class VicinoATeScreen extends ConsumerWidget {
           carburante: c,
           risparmioEuro: risparmio,
           distanzaKm: _dist(migliore, pos),
-          onPortamiQui: () => _portamiQui(context, migliore),
+          onPortamiQui: () {
+            _segnaRientro(ref, migliore, prezzoMigliore);
+            _portamiQui(context, migliore, nav);
+          },
+          onSegnala: () => mostraSegnala(context, migliore, prezzoMigliore),
         ),
         if (alternative.isNotEmpty) ...[
           const SizedBox(height: 18),
@@ -141,9 +154,19 @@ class VicinoATeScreen extends ConsumerWidget {
     return distanzaKm(pos.lat, pos.lon, i.lat!, i.lon!);
   }
 
-  Future<void> _portamiQui(BuildContext context, Impianto i) async {
+  // Prepara il "ritorno dopo il rifornimento": al prossimo avvio chiederà conferma.
+  void _segnaRientro(WidgetRef ref, Impianto i, double prezzo) {
+    ref.read(rientroProvider.notifier).state = Rientro(
+      impiantoId: i.id,
+      nome: i.nome,
+      prezzoMostrato: prezzo,
+      quando: DateTime.now(),
+    );
+  }
+
+  Future<void> _portamiQui(BuildContext context, Impianto i, Navigatore nav) async {
     if (i.lat == null || i.lon == null) return;
-    final ok = await portamiQui(i.lat!, i.lon!);
+    final ok = await portamiQui(i.lat!, i.lon!, navigatore: nav);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossibile aprire il navigatore.')),
@@ -165,7 +188,8 @@ class VicinoATeScreen extends ConsumerWidget {
       );
 
   Widget _statoSenzaRisultati(Carburante c) => Center(
-        child: Text('Nessun impianto con ${c.etichetta} in questa zona.\nProva un altro carburante.',
+        child: Text(
+            'Nessun impianto con ${c.etichetta} entro il raggio.\nAllarga il raggio o cambia carburante nelle impostazioni.',
             textAlign: TextAlign.center, style: PienoText.valoreDettaglio),
       );
 

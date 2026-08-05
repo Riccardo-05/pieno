@@ -4,12 +4,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'design/tokens.dart';
+import 'state/app_state.dart';
 import 'ui/screens/home_shell.dart';
 
-void main() {
-  runApp(const ProviderScope(child: PienoApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  runApp(
+    ProviderScope(
+      overrides: [prefsProvider.overrideWithValue(prefs)],
+      child: const PienoApp(),
+    ),
+  );
 }
 
 class PienoApp extends StatelessWidget {
