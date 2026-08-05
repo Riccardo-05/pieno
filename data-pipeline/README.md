@@ -45,6 +45,18 @@ resta l'ultima build valida (offline-first: «l'app continua a servire i dati de
 Tutto in [`config.yaml`](config.yaml): sorgenti (sostituibili), soglie di validazione,
 parametri del risparmio e target di qualità — valori esatti da pag. 12.
 
+## Storico e regola R4
+
+La regola R4 (salto > 0,08 €/l in 24 h) confronta i prezzi con quelli dell'ultima build:
+`sources.carica_storico()` li rilegge da `build/public/province/*.json`. In locale funziona
+da sé dalla seconda esecuzione in poi; in CI il job **recupera la build precedente** con la
+cache di GitHub Actions, altrimenti ripartirebbe da zero ogni notte e la regola non
+scatterebbe mai.
+
+Il report dichiara sempre l'esito: `storico_disponibile` e `storico_impianti` nelle misure
+di controllo, più un avviso su stderr. Storico assente alla prima esecuzione è normale;
+dopo, significa che il recupero si è rotto.
+
 ## Stato e limiti dichiarati
 
 - **Regola R1 (confine comunale):** richiede i poligoni ISTAT — sorgente **da definire**;

@@ -14,6 +14,9 @@ Stile mappa, marcatori, handoff, Ferrostar (pagine 6, 9 e 13 del documento di pr
 - Pillola bianca 94%, Sora 400 15 px, coda a rombo 9 px.
 - Il più conveniente è più grande (17 px, peso 600), in gradiente menta, con alone radiale Ø 96 px che lo isola.
 - Il prezzo è il marcatore. Nessuna icona di pompa: il numero è l'informazione, disegnato in un layer con gestione delle collisioni, non come widget, oltre i 50 elementi.
+- **Il selezionato è in inchiostro.** L'impianto aperto nel foglio si distingue con una pillola in inchiostro pieno, la più grande di tutte, con alone e sottile anello bianco. L'inchiostro è già il colore della «voce selezionata» (pag. 4) ed è l'unico scuro sulla mappa chiara: non introduce tinte nuove e si trova a colpo d'occhio. Quando un impianto è insieme il più conveniente e il selezionato, vince la selezione: si disegna una sola pillola.
+- Il marcatore selezionato **non cede mai il posto alle collisioni** e sta sopra tutti gli altri: è quello di cui l'utente sta leggendo la scheda.
+- Selezionando dall'elenco, la mappa porta l'impianto in vista **solo se è fuori schermo**: chi tocca un marcatore non deve vedersi scappare la mappa sotto il dito.
 - Raggruppamento sotto lo zoom 12 mostrando il minimo della zona, non il conteggio: «da 2,059» dice qualcosa, «14 impianti» no.
 
 ## Comportamento della mappa

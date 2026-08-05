@@ -1,45 +1,59 @@
-# Pieno — App (Tappa 02: scheletro)
+# Pieno — App
 
-Progetto Flutter. Obiettivo della tappa (linee-guida/08-roadmap.md): *«l'app apre e mostra
-dati veri, senza interfaccia definitiva»*.
+Progetto Flutter delle quattro schermate: **Accesso, Mappa, Vicino a te, Impostazioni**
+(Tappe 02–06 della roadmap). Le regole di forma e comportamento stanno in `linee-guida/`:
+se il codice e le linee guida divergono, sbagliato è il codice.
 
-## Cosa c'è
+## Struttura (`lib/`)
 
-- **Token di design come costanti** — `lib/design/tokens.dart`, `lib/design/typography.dart`
-  (fonte unica: `linee-guida/design-tokens.json`, pag. 4).
-- **Componenti di base** — `lib/ui/components/`: Vetro, SwitchPillola, BottonePrimario,
-  PulsanteTondo, PrezzoText, SfondoAurore.
-- **Archivio locale + download provincia** — `lib/data/`: `local_store.dart` (cache su file,
-  offline-first), `repository.dart` (rete → cache).
-- **Permessi di posizione con spiegazione** — `lib/data/location_service.dart` (un solo fix,
-  precisione bilanciata; il dialogo di sistema va preceduto dalla schermata di spiegazione).
-- **Stato condiviso (Riverpod)** — `lib/state/app_state.dart` (carburante, provincia, dati).
-- **Schermata scheletro** — `lib/ui/screens/boot_screen.dart`: elenco impianti per prezzo,
-  età del dato e sorgente sempre visibili.
+| Cartella | Contenuto |
+| --- | --- |
+| `design/` | `tokens.dart`, `typography.dart` — valori esatti da `linee-guida/design-tokens.json`. |
+| `models/` | Impianto, carburante, manifest, navigatore, segnalazione. |
+| `data/` | `repository.dart` (rete → cache), `local_store.dart` (offline-first), `location_service.dart`, `navigator_launcher.dart`. |
+| `domain/` | Risparmio, ordinamento, geo, geojson. |
+| `state/` | `app_state.dart` — un solo stato condiviso fra le due viste; impostazioni persistite. |
+| `ui/components/` | Vetro, pillole, switch, scheda impianto, marcatori, shortcut, stelle. |
+| `ui/screens/` | `home_shell`, `mappa_screen`, `vicino_a_te_screen`, `impostazioni_screen`, `accesso_screen`, `segnala_sheet`, `spiegazione_posizione`. |
 
-## Come eseguire (sulla tua macchina)
-
-L'ambiente di stesura non ha Flutter installato: i comandi seguenti vanno lanciati da te.
+## Come eseguire
 
 ```bash
 cd app
 flutter pub get
-flutter test           # test del modello (nessuna rete)
-flutter run            # avvia l'app
+flutter test              # dominio + componenti, nessuna rete
+dart analyze lib          # analisi statica
+flutter run -d chrome     # oppure un dispositivo Android/iOS
 ```
 
-Prima di `flutter run`: aggiungere i font in `assets/fonts/` (vedi `assets/fonts/README.md`)
-e generare le cartelle di piattaforma se assenti (`flutter create .`).
+I font Sora e Manrope sono **inclusi** in `assets/fonts/` (vedi il README lì): non serve
+scaricare nulla.
 
-## Da configurare
+> Su Windows `flutter analyze` richiede la Modalità sviluppatore attiva (symlink dei
+> plugin). In mancanza, `dart analyze lib` copre lo stesso codice.
 
-- **`kBaseUrlDati`** in `lib/state/app_state.dart`: URL pubblico della build dati (Tappa 01).
-  In sviluppo si può servire `data-pipeline/build/public/` con un server statico locale, es.
-  `python3 -m http.server` dentro quella cartella, e puntare `kBaseUrlDati` a quell'indirizzo.
+## Configurazione
 
-## Rimandato alle tappe successive
+- **`kBaseUrlDati`** in `lib/state/app_state.dart` — URL della build dati pubblica.
+  In sviluppo si può servire `data-pipeline/build/public/` con `python -m http.server`
+  e puntare la costante lì.
+- **Bundle id** — ancora `com.example.pieno`: da cambiare prima della pubblicazione
+  (`android/app/build.gradle.kts`, target iOS in Xcode).
 
-- Selezione carburante a 4 vie e impostazioni → Tappa 05.
-- Calcolo del più conveniente e del risparmio sul pieno, «Portami qui» → Tappa 03.
-- Mappa, marcatori, foglio inferiore → Tappa 04.
-- Scelta definitiva archivio locale (Drift/Isar) → Tappa 03.
+## Posizione
+
+Il dialogo di sistema non viene mai aperto a freddo: al primo avvio `home_shell` mostra
+`spiegazione_posizione.dart`, che dice a cosa serve la posizione e cosa non viene fatto.
+La scelta è persistita e resta modificabile in **Impostazioni → Dati → Posizione**. Senza
+permesso l'app funziona lo stesso, senza distanze.
+
+I permessi sono dichiarati in `android/app/src/main/AndroidManifest.xml`
+(`ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`) e in `ios/Runner/Info.plist`
+(`NSLocationWhenInUseUsageDescription`).
+
+## Rimandato
+
+- Sincronizzazione di preferiti e preferenze (richiede il backend account).
+- Invio delle segnalazioni: oggi restano in coda locale.
+- Foglio della mappa sovrapposto invece che in colonna — da riprendere testando su mobile.
+- Scelta definitiva dell'archivio locale (Drift/Isar) al posto della cache su file.

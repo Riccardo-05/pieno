@@ -251,9 +251,27 @@ final selezionatoProvider = StateProvider<String?>((ref) => null);
 /// True quando il foglio della mappa è alzato: lo switch flottante sfuma (pag. 6).
 final foglioEspansoProvider = StateProvider<bool>((ref) => false);
 
+/// Consenso dell'utente a usare la posizione, chiesto DENTRO l'app prima del dialogo
+/// di sistema ("permessi graduali", pag. 13): null = mai chiesto, true = ha accettato,
+/// false = ha detto di no. Persistito, così la spiegazione non si ripropone ogni volta.
+final consensoPosizioneProvider = StateProvider<bool?>((ref) {
+  final prefs = ref.watch(prefsProvider);
+  ref.listenSelf((_, next) {
+    if (next == null) {
+      prefs.remove('consensoPosizione');
+    } else {
+      prefs.setBool('consensoPosizione', next);
+    }
+  });
+  return prefs.getBool('consensoPosizione');
+});
+
 /// Posizione dell'utente per calcolare le distanze. Un solo fix, precisione bilanciata.
-/// Se il permesso è negato resta null e le distanze non vengono mostrate.
+/// Il dialogo di sistema NON viene mai aperto prima che l'utente abbia visto la
+/// spiegazione e abbia scelto di procedere. Senza consenso (o senza permesso) resta
+/// null: l'app funziona lo stesso, solo senza distanze.
 final posizioneProvider = FutureProvider<Posizione?>((ref) async {
+  if (ref.watch(consensoPosizioneProvider) != true) return null;
   try {
     return await LocationService().fixIniziale();
   } catch (_) {

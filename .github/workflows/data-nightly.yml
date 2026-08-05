@@ -35,6 +35,18 @@ jobs:
       - name: Test del validatore
         run: python -m unittest discover -s tests -v
 
+      # La regola R4 (salto > 0,08 €/l in 24 h) confronta i prezzi di oggi con quelli
+      # dell'ultima build: senza questo passo il job ripartirebbe da zero ogni notte e
+      # la regola non scatterebbe mai. La chiave è unica per esecuzione (così la cache
+      # viene riscritta ogni volta) e `restore-keys` recupera la build più recente.
+      - name: Recupera la build precedente (storico per la regola R4)
+        uses: actions/cache@v4
+        with:
+          path: data-pipeline/build/public
+          key: pieno-build-${{ github.run_id }}
+          restore-keys: |
+            pieno-build-
+
       - name: Esegui la pipeline (scarico reale)
         run: python -m pieno_pipeline.pipeline --scarica
 

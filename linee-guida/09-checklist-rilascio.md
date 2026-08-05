@@ -41,7 +41,7 @@ Controlli obbligatori prima di ogni pubblicazione. Voci ricavate dal documento d
 ## Attribuzioni obbligatorie
 
 - [ ] «Dati: Ministero delle Imprese e del Made in Italy — IODL 2.0» nella schermata Impostazioni e nella scheda dello store.
-- [ ] «© OpenStreetMap contributors» visibile sulla mappa.
+- [x] «© OpenStreetMap contributors» visibile sulla mappa (in basso a sinistra, sempre presente).
 - [ ] Se si usa un servizio di percorsi, la relativa attribuzione secondo la sua licenza.
 
 ## Materiali per gli store
@@ -54,8 +54,11 @@ Controlli obbligatori prima di ogni pubblicazione. Voci ricavate dal documento d
 
 Documenti pronti in `rilascio/`: `privacy.md`, `store-listing.md`, `test-usabilita.md`.
 
+- [x] **Permessi di posizione** dichiarati (Android `ACCESS_*_LOCATION`, iOS
+      `NSLocationWhenInUseUsageDescription`) e spiegazione mostrata prima del dialogo di sistema.
+- [x] **Font** Sora e Manrope inclusi in `app/assets/fonts/` con le rispettive licenze OFL.
 - [ ] Cambiare il **package/bundle id** da `com.example.pieno` a un identificativo proprio.
-- [ ] Impostare **nome visibile** «Pieno» (Android `android:label`, iOS `CFBundleDisplayName`).
+- [x] Impostare **nome visibile** «Pieno» (Android `android:label`, iOS `CFBundleDisplayName`).
 - [ ] Allineare **versione** (`app/pubspec.yaml → version`).
 - [ ] Icona app e screenshot (vedi `rilascio/store-listing.md`).
 - [ ] **Pubblicare l'informativa privacy** a un URL raggiungibile e inserirlo nelle schede store.

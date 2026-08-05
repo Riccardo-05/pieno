@@ -1,5 +1,5 @@
 name: pieno
-description: "Pieno — prezzi carburanti, Italia. Scheletro dell'app (Roadmap 02)."
+description: "Pieno — prezzi carburanti, Italia. Quattro schermate: Accesso, Mappa, Vicino a te, Impostazioni."
 publish_to: "none"
 version: 0.1.0+1
 
@@ -29,27 +29,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/map_style.json
-  # Font Sora e Manrope (pag. 4): DA ATTIVARE quando i .ttf sono in assets/fonts/.
-  # Per lo scheletro (Tappa 02) restano commentati: l'app gira con i font di sistema.
-  # Vedi assets/fonts/README.md per i file attesi. Poi togli il commento qui sotto.
-  # fonts:
-  #   - family: Sora
-  #     fonts:
-  #       - asset: assets/fonts/Sora-Light.ttf
-  #         weight: 300
-  #       - asset: assets/fonts/Sora-Regular.ttf
-  #         weight: 400
-  #       - asset: assets/fonts/Sora-Medium.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/Sora-SemiBold.ttf
-  #         weight: 600
-  #   - family: Manrope
-  #     fonts:
-  #       - asset: assets/fonts/Manrope-Medium.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/Manrope-SemiBold.ttf
-  #         weight: 600
-  #       - asset: assets/fonts/Manrope-Bold.ttf
-  #         weight: 700
-  #       - asset: assets/fonts/Manrope-ExtraBold.ttf
-  #         weight: 800
+  # Font di pag. 4: Sora per numeri e prezzi (cifre tabulari), Manrope per il resto.
+  # Sono i file VARIABILI ufficiali (asse wght): un solo .ttf per famiglia copre tutti
+  # i pesi usati in design/typography.dart, quindi qui non si dichiara `weight`.
+  # Licenza SIL Open Font License, testo in assets/fonts/OFL-*.txt.
+  fonts:
+    - family: Sora
+      fonts:
+        - asset: "assets/fonts/Sora[wght].ttf"
+    - family: Manrope
+      fonts:
+        - asset: "assets/fonts/Manrope[wght].ttf"

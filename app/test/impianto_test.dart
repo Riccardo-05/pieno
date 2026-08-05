@@ -5,6 +5,7 @@
 
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pieno/domain/geojson.dart';
 import 'package:pieno/models/carburante.dart';
 import 'package:pieno/models/impianto.dart';
 import 'package:pieno/state/app_state.dart';
@@ -50,5 +51,37 @@ void main() {
   test('le quattro chiavi carburante combaciano con la pipeline', () {
     expect(Carburante.values.map((c) => c.chiave).toSet(),
         {'benzina', 'gasolio', 'gpl', 'metano'});
+  });
+
+  group('marcatori della mappa', () {
+    List<Map<String, dynamic>> features({String? migliore, String? selezionato}) {
+      final dati = DatiProvincia.fromJson(jsonDecode(_json) as Map<String, dynamic>);
+      final geo = geoJsonPrezzi(dati.impianti, Carburante.benzina,
+          idMigliore: migliore, idSelezionato: selezionato);
+      return (geo['features'] as List).cast<Map<String, dynamic>>();
+    }
+
+    Map<String, dynamic> props(List<Map<String, dynamic>> f, String id) =>
+        f.firstWhere((e) => (e['properties'] as Map)['id'] == id)['properties']
+            as Map<String, dynamic>;
+
+    test('il selezionato è marcato, gli altri no', () {
+      final f = features(selezionato: '1001');
+      expect(props(f, '1001')['selezionato'], isTrue);
+      expect(props(f, '1002')['selezionato'], isFalse);
+    });
+
+    test('senza selezione nessun marcatore risulta selezionato', () {
+      final f = features(migliore: '1002');
+      expect(f.every((e) => (e['properties'] as Map)['selezionato'] == false), isTrue);
+    });
+
+    test('un impianto può essere insieme migliore e selezionato', () {
+      // Sulla mappa vince la selezione: i filtri dei layer escludono il selezionato
+      // dal layer "migliore", così non si disegnano due pillole sullo stesso punto.
+      final p = props(features(migliore: '1002', selezionato: '1002'), '1002');
+      expect(p['migliore'], isTrue);
+      expect(p['selezionato'], isTrue);
+    });
   });
 }

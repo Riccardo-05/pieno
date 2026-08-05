@@ -51,8 +51,11 @@ def esegui(args: argparse.Namespace) -> int:
 
     # --- report --------------------------------------------------------------------
     ver = build.versione(data_dato)
-    rep = report.genera(impianti.values(), conteggi, cfg, data_dato, ver)
+    rep = report.genera(impianti.values(), conteggi, cfg, data_dato, ver, storico=storico)
     print(f"Mostrati {rep['mostrati']} · scartati {rep['scartati']} · quarantena {rep['in_quarantena']}")
+    if not rep["misure_di_controllo"]["storico_disponibile"]:
+        print("Attenzione: nessuna build precedente trovata → la regola R4 (salto in 24 h) "
+              "non è stata applicata.", file=sys.stderr)
     print(f"Freschezza 24h: {rep['misure_di_controllo']['freschezza_pct_24h']}% "
           f"(target {cfg.qualita.freschezza_target_pct}%) → esito {rep['esito_pubblicazione']}")
 

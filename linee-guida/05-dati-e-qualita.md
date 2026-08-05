@@ -47,6 +47,14 @@ La pubblicazione avviene su una nuova versione dei file e viene scambiata solo s
 | Nessuna comunicazione da oltre 2 giorni | Escluso dai risultati (soglia regolabile) |
 | Due impianti a meno di 25 m con stesso marchio | Deduplica |
 
+**La regola del salto ha bisogno del giorno prima.** Il controllo «salto > 0,08 €/l in 24
+ore» confronta i prezzi di oggi con quelli dell'ultima build pubblicata: se il job riparte
+da zero, non ha con cosa confrontare e la regola non scatta mai — in silenzio. Perciò il
+job notturno **recupera la build precedente** (cache di GitHub Actions,
+`.github/workflows/data-nightly.yml`) e il report dichiara sempre se lo storico c'era
+(`storico_disponibile`, `storico_impianti`). Assente alla primissima esecuzione è normale;
+assente dopo, è un guasto da riparare.
+
 **Taratura operativa della soglia «listino fermo».** Il PDF indica 2 giorni ma la dichiara esplicitamente «soglia regolabile». Sui dati reali MIMIT una soglia di 2 giorni escluderebbe ~88% degli impianti, perché in Italia la maggior parte dei distributori non ritocca il prezzo ogni 48 ore (un prezzo invariato resta comunque valido). La soglia è quindi impostata a **30 giorni** (`data-pipeline/config.yaml → eta_massima_giorni`): esclude solo i listini davvero abbandonati, mantenendo la copertura nazionale. L'età del singolo prezzo resta sempre visibile all'utente (onestà sul dato).
 
 ## Il ciclo di correzione

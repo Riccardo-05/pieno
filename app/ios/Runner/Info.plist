@@ -26,6 +26,19 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Posizione: obbligatoria su iOS, altrimenti la richiesta di permesso termina il
+	     processo. Un solo rilevamento, a precisione bilanciata, mai inviato ad alcun
+	     server (rilascio/privacy.md). -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Serve solo a mostrarti i distributori più vicini e la distanza. Il rilevamento resta sul telefono e non viene inviato a nessuno.</string>
+	<!-- Schemi delle app di navigazione interrogati da «Portami qui» (url_launcher). -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>waze</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

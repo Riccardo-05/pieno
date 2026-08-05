@@ -32,7 +32,7 @@ import 'impostazioni_screen.dart';
 import 'segnala_sheet.dart';
 
 const _sorgente = 'prezzi';
-const _layers = ['prezzi-testo', 'prezzi-migliore'];
+const _layers = ['prezzi-testo', 'prezzi-migliore', 'prezzi-selezionato'];
 const double _foglioMin = 150;
 
 class MappaScreen extends ConsumerStatefulWidget {
@@ -103,6 +103,20 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     await c.addImage('pill-bianca', await _pill(w: 66, h: 32, menta: false, bordo: true));
     await c.addImage('pill-menta', await _pill(w: 78, h: 38, menta: true, alone: true));
     await c.addImage('pill-cluster', await _pill(w: 92, h: 34, menta: true));
+    // Selezionato: inchiostro pieno, la pillola più grande di tutte, con alone che la
+    // stacca dal resto. L'inchiostro è il colore della "voce selezionata" (pag. 4) ed è
+    // l'unico scuro sulla mappa chiara: si trova a colpo d'occhio.
+    await c.addImage(
+      'pill-selezionata',
+      await _pill(
+        w: 84,
+        h: 40,
+        menta: false,
+        alone: true,
+        bordo: true, // sottile anello bianco: stacca l'inchiostro dal fondo della mappa
+        tinta: PienoColors.inchiostro,
+      ),
+    );
 
     // Marcatori non raggruppati (hanno prezzo solo i punti singoli).
     await c.addSymbolLayer(
@@ -118,7 +132,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         textOffset: [0, -0.28],
         textAllowOverlap: false,
       ),
-      filter: ['all', ['!=', ['get', 'migliore'], true], ['!', ['has', 'point_count']]],
+      filter: [
+        'all',
+        ['!=', ['get', 'migliore'], true],
+        ['!=', ['get', 'selezionato'], true],
+        ['!', ['has', 'point_count']],
+      ],
     );
     await c.addSymbolLayer(
       _sorgente,
@@ -133,7 +152,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         textOffset: [0, -0.24],
         textAllowOverlap: true,
       ),
-      filter: ['all', ['==', ['get', 'migliore'], true], ['!', ['has', 'point_count']]],
+      filter: [
+        'all',
+        ['==', ['get', 'migliore'], true],
+        ['!=', ['get', 'selezionato'], true],
+        ['!', ['has', 'point_count']],
+      ],
     );
     // Cluster: pillola menta con il prezzo minimo della zona ("da 1,8xx").
     await c.addSymbolLayer(
@@ -154,6 +178,29 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         textAllowOverlap: true,
       ),
       filter: ['has', 'point_count'],
+    );
+    // Selezionato per ultimo: sta sopra a tutti gli altri e non cede mai il posto alle
+    // collisioni. È l'impianto aperto nel foglio: deve restare visibile per definizione.
+    await c.addSymbolLayer(
+      _sorgente,
+      'prezzi-selezionato',
+      const SymbolLayerProperties(
+        iconImage: 'pill-selezionata',
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        textField: '{prezzo}',
+        textSize: 17,
+        textFont: ['Noto Sans Regular'],
+        textColor: '#FFFFFF',
+        textOffset: [0, -0.24],
+        textAllowOverlap: true,
+        textIgnorePlacement: true,
+      ),
+      filter: [
+        'all',
+        ['==', ['get', 'selezionato'], true],
+        ['!', ['has', 'point_count']],
+      ],
     );
     _stilePronto = true;
     c.onFeatureTapped.add((point, latLng, featureId, layerId, annotation) {
@@ -202,7 +249,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final ord = ref.read(ordinamentoProvider);
     final pos = ref.read(posizioneProvider).valueOrNull;
     final ordinati = ordina(marcatori, carburante, ord, pos);
-    final geo = geoJsonPrezzi(marcatori, carburante, idMigliore: ordinati.first.id);
+    final geo = geoJsonPrezzi(
+      marcatori,
+      carburante,
+      idMigliore: ordinati.first.id,
+      idSelezionato: ref.read(selezionatoProvider),
+    );
     await c.setGeoJsonSource(_sorgente, geo);
 
     // Ricentra solo quando cambia la provincia (non a ogni cambio di ordinamento).
@@ -222,6 +274,37 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         : LatLng(ordinati.first.lat ?? 41.9, ordinati.first.lon ?? 12.5);
     _movimentoProgrammatico = true;
     c.animateCamera(CameraUpdate.newLatLngZoom(target, 11));
+  }
+
+  /// Porta in vista l'impianto selezionato, ma **solo se è fuori schermo**: chi ha
+  /// appena toccato un marcatore non si vede scappare la mappa sotto il dito, mentre
+  /// chi seleziona dall'elenco lo ritrova centrato (pag. 3: "un solo stato, due
+  /// rappresentazioni").
+  Future<void> _mostraSelezionato(String? id) async {
+    final c = _controller;
+    if (c == null || id == null || !_stilePronto) return;
+    final imp = _trova(ref.read(marcatoriProvider), id);
+    if (imp?.lat == null || imp?.lon == null) return;
+    final punto = LatLng(imp!.lat!, imp.lon!);
+
+    final zoom = c.cameraPosition?.zoom ?? 11;
+    bool visibile = false;
+    try {
+      final area = await c.getVisibleRegion();
+      visibile = punto.latitude >= area.southwest.latitude &&
+          punto.latitude <= area.northeast.latitude &&
+          punto.longitude >= area.southwest.longitude &&
+          punto.longitude <= area.northeast.longitude;
+    } catch (_) {
+      // Regione non disponibile: meglio non muovere la mappa che muoverla a sproposito.
+      return;
+    }
+    if (visibile && zoom >= 12) return;
+
+    _movimentoProgrammatico = true;
+    await c.animateCamera(
+      zoom < 12 ? CameraUpdate.newLatLngZoom(punto, 13) : CameraUpdate.newLatLng(punto),
+    );
   }
 
   void _vaiAllaPosizione() {
@@ -273,6 +356,10 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   Widget build(BuildContext context) {
     ref.listen(marcatoriProvider, (_, __) => _aggiornaSorgente());
     ref.listen(ordinamentoProvider, (_, __) => _aggiornaSorgente());
+    ref.listen(selezionatoProvider, (_, id) async {
+      await _aggiornaSorgente();
+      await _mostraSelezionato(id);
+    });
     ref.listen(posizioneProvider, (_, __) {
       _aggiornaPosizione();
       _aggiornaSorgente();
@@ -340,6 +427,14 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
                       ),
                     ),
                   ),
+                // Attribuzione obbligatoria, visibile SULLA mappa (linee-guida/
+                // 06-architettura.md e 09-checklist-rilascio.md). Discreta ma leggibile:
+                // non è un elemento dell'interfaccia, è una condizione di licenza.
+                const Positioned(
+                  left: PienoSpacing.margineLaterale,
+                  bottom: 8,
+                  child: _AttribuzioneMappa(),
+                ),
                 Positioned(
                   right: PienoSpacing.margineLaterale,
                   bottom: 24,
@@ -463,9 +558,15 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     return InkWell(
       onTap: () => ref.read(selezionatoProvider.notifier).state = i.id,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0x14000000))),
+        // La riga selezionata è la stessa cosa del marcatore in inchiostro sulla mappa:
+        // qui si segnala con una superficie morbida, non con una linea dura (pag. 2).
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: attivo ? 12 : 0),
+        decoration: BoxDecoration(
+          color: attivo ? PienoColors.inchiostro.withValues(alpha: 0.06) : null,
+          borderRadius: attivo ? BorderRadius.circular(18) : null,
+          border: attivo
+              ? null
+              : const Border(bottom: BorderSide(color: Color(0x14000000))),
         ),
         child: Row(
           children: [
@@ -494,13 +595,16 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
 
   // Disegna una pillola-marcatore come PNG: rettangolo arrotondato con coda a rombo.
   // menta=false → bianca 94%; menta=true → gradiente menta (pag. 6).
-  // alone → alone radiale che isola il marcatore migliore; bordo → bordo bianco.
+  // tinta → riempimento pieno con quel colore (selezionato: inchiostro), ha la
+  // precedenza su menta/bianco. alone → alone radiale che isola il marcatore;
+  // bordo → bordo bianco.
   Future<Uint8List> _pill({
     required double w,
     required double h,
     required bool menta,
     bool alone = false,
     bool bordo = false,
+    ui.Color? tinta,
   }) async {
     const tail = 8.0;
     final totH = h + tail;
@@ -512,16 +616,22 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       ui.Radius.circular(h / 2),
     );
     final fill = ui.Paint();
-    if (menta) {
-      if (alone) {
-        canvas.drawCircle(
-          ui.Offset(w / 2, h / 2),
-          w / 2,
-          ui.Paint()
-            ..color = const ui.Color(0x3300B39A)
-            ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 14),
-        );
-      }
+    if (alone) {
+      // Alone radiale che isola il marcatore dagli altri: della stessa famiglia di
+      // colore del riempimento, così non introduce tinte nuove sulla mappa.
+      canvas.drawCircle(
+        ui.Offset(w / 2, h / 2),
+        w / 2,
+        ui.Paint()
+          ..color = tinta != null
+              ? tinta.withValues(alpha: 0.28)
+              : const ui.Color(0x3300B39A)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 14),
+      );
+    }
+    if (tinta != null) {
+      fill.color = tinta;
+    } else if (menta) {
       fill.shader = ui.Gradient.linear(
         const ui.Offset(0, 0),
         ui.Offset(w, h),
@@ -568,5 +678,29 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       if (i.id == id) return i;
     }
     return null;
+  }
+}
+
+/// Attribuzione della mappa. Le tile di OpenFreeMap derivano da OpenStreetMap: la
+/// licenza ODbL richiede che il credito sia visibile dove la mappa è mostrata, non
+/// solo dentro le impostazioni.
+class _AttribuzioneMappa extends StatelessWidget {
+  const _AttribuzioneMappa();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xB8FFFFFF),
+        borderRadius: BorderRadius.circular(PienoRadii.pillola),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          '© OpenStreetMap contributors',
+          style: PienoText.valoreDettaglio.copyWith(fontSize: 10),
+        ),
+      ),
+    );
   }
 }

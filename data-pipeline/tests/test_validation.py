@@ -4,6 +4,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 
+from pieno_pipeline import report
 from pieno_pipeline.config import carica
 from pieno_pipeline.geo import sembra_invertita, distanza_metri
 from pieno_pipeline.model import Impianto, Prezzo, normalizza_carburante
@@ -81,6 +82,30 @@ class TestRegole(unittest.TestCase):
         valida({"s": imp}, CFG, OGGI, storico=storico)
         self.assertNotIn("benzina", imp.prezzi)
         self.assertTrue(imp.quarantena)
+
+
+class TestReport(unittest.TestCase):
+    """Il report deve dichiarare se lo storico c'era: senza, la regola R4 non può
+    scattare e il fatto va reso visibile invece che passare inosservato."""
+
+    def _report(self, storico):
+        imp = impianto("r", 45.46, 9.19, {"benzina": 1.80})
+        conteggi = valida({"r": imp}, CFG, OGGI, storico=storico)
+        return report.genera([imp], conteggi, CFG, OGGI, "test", storico=storico)
+
+    def test_storico_assente_segnalato(self):
+        misure = self._report(None)["misure_di_controllo"]
+        self.assertFalse(misure["storico_disponibile"])
+        self.assertEqual(misure["storico_impianti"], 0)
+
+    def test_storico_presente_segnalato(self):
+        misure = self._report({"r": {"benzina": 1.79}})["misure_di_controllo"]
+        self.assertTrue(misure["storico_disponibile"])
+        self.assertEqual(misure["storico_impianti"], 1)
+
+    def test_storico_non_blocca_la_pubblicazione(self):
+        # Lo storico manca solo alla primissima build: è un avviso, non un errore.
+        self.assertEqual(self._report(None)["esito_pubblicazione"], "ok")
 
 
 if __name__ == "__main__":

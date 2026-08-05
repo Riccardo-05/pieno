@@ -6,11 +6,14 @@ import '../models/carburante.dart';
 import '../models/impianto.dart';
 
 /// FeatureCollection con un punto per impianto che ha il carburante indicato.
-/// Proprietà per feature: id, prezzo (testo "1,859"), prezzoNum, migliore (bool).
+/// Proprietà per feature: id, prezzo (testo "1,859"), prezzoNum, migliore (bool),
+/// selezionato (bool) — quest'ultimo distingue sulla mappa l'impianto aperto nel
+/// foglio, con lo stesso stato condiviso dall'elenco (pag. 3).
 Map<String, dynamic> geoJsonPrezzi(
   List<Impianto> impianti,
   Carburante carburante, {
   String? idMigliore,
+  String? idSelezionato,
 }) {
   final features = <Map<String, dynamic>>[];
   for (final i in impianti) {
@@ -27,6 +30,7 @@ Map<String, dynamic> geoJsonPrezzi(
         'prezzo': p.valore.toStringAsFixed(3).replaceAll('.', ','),
         'prezzoNum': p.valore,
         'migliore': i.id == idMigliore,
+        'selezionato': idSelezionato != null && i.id == idSelezionato,
       },
     });
   }

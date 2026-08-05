@@ -13,6 +13,7 @@ import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
 import '../components/switch_pillola.dart';
 import 'mappa_screen.dart';
+import 'spiegazione_posizione.dart';
 import 'vicino_a_te_screen.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -26,11 +27,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void initState() {
     super.initState();
-    // All'avvio (= dopo l'eventuale tragitto): se c'è un rifornimento in sospeso, chiedi.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final r = ref.read(rientroProvider);
-      if (r != null) _chiediRientro(r);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _avvio());
+  }
+
+  /// Due cose all'apertura, in quest'ordine: la spiegazione della posizione al primo
+  /// avvio (mai il dialogo di sistema a freddo), poi l'eventuale domanda sul
+  /// rifornimento appena fatto. Mai i due fogli insieme.
+  Future<void> _avvio() async {
+    if (ref.read(consensoPosizioneProvider) == null) {
+      await mostraSpiegazionePosizione(context);
+      if (!mounted) return;
+    }
+    final r = ref.read(rientroProvider);
+    if (r != null) await _chiediRientro(r);
   }
 
   @override

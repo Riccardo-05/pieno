@@ -66,8 +66,9 @@ flutter run -d chrome     # oppure -d macos / un dispositivo Android/iOS
 ```
 
 L'app punta ai dati pubblici via `kBaseUrlDati` in `lib/state/app_state.dart`. I font Sora e
-Manrope sono dichiarati ma da aggiungere in `app/assets/fonts/` (vedi il README lì). Dettagli
-in [`app/README.md`](app/README.md).
+Manrope (licenza OFL) sono inclusi in `app/assets/fonts/`. Su Windows `flutter analyze`
+richiede la Modalità sviluppatore: in mancanza si usa `dart analyze lib`. Dettagli in
+[`app/README.md`](app/README.md).
 
 ### Struttura dell'app (`app/lib`)
 
@@ -108,7 +109,8 @@ Tutto ciò che il PDF colloca **"solo quando servirà"** o **"dopo il rilascio"*
   icona app, hosting dell'informativa privacy.
 - **Rifinitura mappa**: il foglio inferiore è "a colonna" (robusto su web) invece che
   sovrapposto come nel PDF — l'effetto sovrapposto va ripreso testando su mobile.
-- **Font Sora/Manrope** non inclusi nel repo (licenza OFL, da scaricare).
+- **Pagina pubblica sulla qualità dei dati** scritta per chi guida, non il log tecnico del
+  job: finché non esiste, dalle Impostazioni non si linka il `report-qualita.md`.
 - **Fase 5 e oltre**: navigazione interna con **Ferrostar**, tema scuro, confronto lungo il
   percorso, CarPlay / Android Auto.
 

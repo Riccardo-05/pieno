@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/local_store.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../models/navigatore.dart';
@@ -173,29 +174,92 @@ class ImpostazioniScreen extends ConsumerWidget {
     );
   }
 
-  // 5 — Dati: segnala un prezzo errato, qualità dei dati, fonte.
-  Widget _gruppoDati(BuildContext context, WidgetRef ref) => _Gruppo(
-        titolo: 'DATI',
-        figli: [
-          _Riga(
-            titolo: 'Segnala un prezzo errato',
-            coloreTitolo: PienoColors.mentaScura,
-            onTap: () {
-              final elenco = ref.read(elencoProvider);
-              final carburante = ref.read(carburanteProvider);
-              if (elenco.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Apri un impianto per segnalarne il prezzo.')),
-                );
-                return;
-              }
-              final imp = elenco.first;
-              mostraSegnala(context, imp, imp.prezzoDi(carburante)!.valore);
-            },
+  // 5 — Dati: segnalazione, fonte, ultimo aggiornamento, permessi, dati locali (pag. 8).
+  Widget _gruppoDati(BuildContext context, WidgetRef ref) {
+    final carburante = ref.watch(carburanteProvider);
+    final elenco = ref.watch(elencoProvider);
+    final selId = ref.watch(selezionatoProvider);
+    // Quale impianto si segnala: quello selezionato; in mancanza, il primo dell'elenco
+    // (il più conveniente, quello mostrato in cima). Il nome è scritto nella riga, così
+    // non si segnala mai un impianto a caso senza saperlo.
+    final imp = elenco.isEmpty
+        ? null
+        : elenco.firstWhere((i) => i.id == selId, orElse: () => elenco.first);
+
+    return _Gruppo(
+      titolo: 'DATI',
+      figli: [
+        _Riga(
+          titolo: 'Segnala un prezzo errato',
+          sottotitolo: imp == null
+              ? null
+              : (imp.nome.isNotEmpty ? imp.nome : imp.marchio),
+          coloreTitolo: PienoColors.mentaScura,
+          onTap: () {
+            if (imp == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Apri un impianto per segnalarne il prezzo.')),
+              );
+              return;
+            }
+            mostraSegnala(context, imp, imp.prezzoDi(carburante)!.valore);
+          },
+        ),
+        const _Riga(titolo: 'Fonte dei dati', valore: 'MIMIT · IODL 2.0'),
+        _Riga(titolo: 'Ultimo aggiornamento', valore: _ultimoAggiornamento(ref)),
+        const _RigaPosizione(),
+        _Riga(
+          titolo: 'Cancella i dati salvati',
+          coloreTitolo: PienoColors.rame,
+          onTap: () => _cancellaDatiLocali(context, ref),
+        ),
+      ],
+    );
+  }
+
+  /// Data del file ministeriale attualmente in uso. "Onestà sul dato": l'età è sempre
+  /// dichiarata, anche qui, non solo nella riga di contesto di Vicino a te.
+  String _ultimoAggiornamento(WidgetRef ref) {
+    final quando = ref.watch(datiProvinciaProvider).valueOrNull?.dati?.datoDel;
+    if (quando == null) return 'non disponibile';
+    String due(int n) => n.toString().padLeft(2, '0');
+    return '${due(quando.day)}/${due(quando.month)}/${quando.year}'
+        ', ore ${due(quando.hour)}:${due(quando.minute)}';
+  }
+
+  /// Cancella zone salvate, preferenze, segnalazioni e valutazioni: quanto promesso
+  /// dall'informativa privacy, senza dover disinstallare l'app.
+  Future<void> _cancellaDatiLocali(BuildContext context, WidgetRef ref) async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancellare i dati salvati?'),
+        content: Text(
+          'Vengono rimossi dal telefono le zone scaricate, le preferenze, le '
+          'segnalazioni in attesa e le tue valutazioni. I prezzi si riscaricano da soli.',
+          style: PienoText.valoreDettaglio,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annulla'),
           ),
-          const _Riga(titolo: 'Fonte dei dati', valore: 'MIMIT · IODL 2.0'),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Cancella', style: TextStyle(color: PienoColors.rame)),
+          ),
         ],
-      );
+      ),
+    );
+    if (conferma != true) return;
+
+    await LocalStore().svuota();
+    await ref.read(prefsProvider).clear();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dati cancellati. Riavvia l\'app per ripartire da zero.')),
+    );
+  }
 
   Future<void> _scegliNavigatore(BuildContext context, WidgetRef ref, Navigatore attuale) async {
     final scelto = await showModalBottomSheet<Navigatore>(
@@ -221,6 +285,30 @@ class ImpostazioniScreen extends ConsumerWidget {
 }
 
 // ---- Widget di supporto ----------------------------------------------------------
+
+/// Riga «Posizione»: mostra lo stato del consenso e permette di cambiare idea.
+/// Chi ha risposto «Non ora» alla spiegazione deve poter riattivare la posizione da
+/// qui, senza reinstallare l'app; chi l'ha concessa deve poterla revocare.
+class _RigaPosizione extends ConsumerWidget {
+  const _RigaPosizione();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final consenso = ref.watch(consensoPosizioneProvider);
+    return _Riga(
+      titolo: 'Posizione',
+      sottotitolo: consenso == true
+          ? 'Un solo rilevamento, solo sul telefono'
+          : 'Senza posizione non vedi le distanze',
+      trailing: Switch(
+        value: consenso == true,
+        activeColor: Colors.white,
+        activeTrackColor: PienoColors.mentaScuraGrad,
+        onChanged: (v) => ref.read(consensoPosizioneProvider.notifier).state = v,
+      ),
+    );
+  }
+}
 
 class _Gruppo extends StatelessWidget {
   const _Gruppo({required this.titolo, required this.figli});

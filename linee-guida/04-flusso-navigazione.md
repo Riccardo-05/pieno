@@ -13,6 +13,19 @@ Quattro schermate, un solo percorso. L'accesso si attraversa una volta sola; da 
 
 Da Vicino a te e dalla scheda impianto, «Portami qui» apre il navigatore del telefono (Apple Maps · Google Maps · Waze).
 
+## Dove si entra davvero (decisione presa)
+
+Il documento di progetto elenca l'Accesso come primo passo, ma l'app **apre direttamente
+sulla Mappa**: l'Accesso si raggiunge da Impostazioni → «Accedi per sincronizzare». È una
+scelta deliberata, non una dimenticanza, e discende da una regola che sta più in alto:
+*l'account non è mai obbligatorio, l'app funziona al primo avvio, senza registrazione*.
+Mettere una schermata di login davanti a chi vuole solo vedere un prezzo costa attivazioni
+senza dare nulla in cambio, finché la sincronizzazione non esiste.
+
+Al primo avvio l'unica cosa che precede la Mappa è la **spiegazione della posizione**: un
+foglio che dice a cosa serve e cosa non viene fatto, prima del dialogo di sistema. Si può
+rispondere «Non ora» e proseguire; la scelta si cambia in Impostazioni → Dati → Posizione.
+
 ## Regole del flusso
 
 - La mappa è la schermata di avvio dopo il primo accesso: è quella che orienta. Chi preferisce l'elenco lo imposta e la scelta viene ricordata.

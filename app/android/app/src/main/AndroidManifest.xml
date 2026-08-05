@@ -1,4 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Posizione: un solo fix a precisione "bilanciata" per calcolare le distanze e
+         scegliere la provincia più vicina (linee-guida/06-architettura.md). Facoltativa:
+         senza permesso l'app funziona lo stesso, solo senza distanze. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Il GPS non è indispensabile: l'app resta installabile su dispositivi che ne sono privi. -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
+    <!-- Scaricamento dei file di provincia dalla CDN. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="Pieno"
         android:name="${applicationName}"
@@ -40,6 +50,13 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- «Portami qui» apre un URL universale (Google Maps, Apple Maps, Waze) con
+             url_launcher. Da Android 11 `canLaunchUrl` risponde false se l'app non
+             dichiara qui l'intento che intende risolvere. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

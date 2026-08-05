@@ -41,4 +41,13 @@ class LocalStore {
     final dir = await _dir();
     return _file(dir, provincia).exists();
   }
+
+  /// Cancella tutte le zone salvate (Impostazioni → Dati → «Cancella i dati salvati»).
+  /// L'informativa privacy promette che svuotando i dati non resti nulla in locale:
+  /// questo è il gesto che la mantiene senza disinstallare l'app.
+  Future<void> svuota() async {
+    if (kIsWeb) return;
+    final dir = await _dir();
+    if (await dir.exists()) await dir.delete(recursive: true);
+  }
 }
