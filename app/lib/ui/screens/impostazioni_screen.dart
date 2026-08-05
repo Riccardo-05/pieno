@@ -7,9 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
-import '../../models/carburante.dart';
 import '../../models/navigatore.dart';
 import '../../state/app_state.dart';
+import '../components/carburante_selettore.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/sfondo_aurore.dart';
 import '../components/vetro.dart';
@@ -98,19 +98,13 @@ class ImpostazioniScreen extends ConsumerWidget {
 
   // 2 — Rifornimento: carburante, capacità serbatoio (modalità = da definire).
   Widget _gruppoRifornimento(WidgetRef ref) {
-    final carburante = ref.watch(carburanteProvider);
     final capacita = ref.watch(capacitaLitriProvider);
     return _Gruppo(
       titolo: 'RIFORNIMENTO',
       figli: [
-        _Riga(
+        const _Riga(
           titolo: 'Carburante',
-          trailing: _SceltaChip<Carburante>(
-            valori: Carburante.values,
-            selezionato: carburante,
-            etichetta: (c) => c.etichetta,
-            onScelta: (c) => ref.read(carburanteProvider.notifier).state = c,
-          ),
+          trailing: CarburanteSelettore(),
         ),
         _RigaSlider(
           titolo: 'Capacità serbatoio',

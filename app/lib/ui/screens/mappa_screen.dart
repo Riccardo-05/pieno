@@ -24,6 +24,7 @@ import '../../domain/risparmio.dart';
 import '../../models/impianto.dart';
 import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
+import '../components/carburante_selettore.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
 import '../components/scheda_impianto.dart';
@@ -308,6 +309,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
                   left: PienoSpacing.margineLaterale,
                   child: OrdinamentoShortcut(),
                 ),
+                // Selettore carburante a tendina in alto a destra.
+                const Positioned(
+                  top: 16,
+                  right: PienoSpacing.margineLaterale,
+                  child: CarburanteSelettore(),
+                ),
                 // "Cerca in questa zona": appare dopo che l'utente sposta la mappa;
                 // nessun ricaricamento automatico che sposta i risultati sotto il dito.
                 if (_mostraCerca)
@@ -370,6 +377,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final altezza = _altezzaFoglio.clamp(_foglioMin, maxFoglio);
     return Container(
       height: altezza,
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         color: Color(0xFFF7FAFB),
         borderRadius: BorderRadius.vertical(top: Radius.circular(PienoRadii.schedaPrincipale)),
@@ -429,7 +437,8 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         : null;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+      // Spazio in fondo per non far coprire l'ultima riga dallo switch flottante.
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 96),
       children: [
         SchedaImpianto(
           impianto: selezionato,

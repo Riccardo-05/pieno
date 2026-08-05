@@ -278,6 +278,30 @@ void aggiungiSegnalazione(WidgetRef ref, Segnalazione s) {
   ref.read(segnalazioniProvider.notifier).update((l) => [...l, s]);
 }
 
+/// Valutazioni a stelle INTERNE dell'utente, per impianto (1–5), salvate localmente.
+/// Le valutazioni ESTERNE (Google ecc.) richiedono un'API: verranno mostrate per prime
+/// quando ci saranno; per ora esiste solo la valutazione interna. Vedi StelleValutazione.
+final valutazioniProvider = StateProvider<Map<String, int>>((ref) {
+  final prefs = ref.watch(prefsProvider);
+  ref.listenSelf((_, next) => prefs.setString('valutazioni', jsonEncode(next)));
+  final raw = prefs.getString('valutazioni');
+  if (raw == null) return <String, int>{};
+  return (jsonDecode(raw) as Map)
+      .map((k, v) => MapEntry(k as String, (v as num).toInt()));
+});
+
+void valuta(WidgetRef ref, String impiantoId, int stelle) {
+  ref.read(valutazioniProvider.notifier).update((m) {
+    final n = Map<String, int>.from(m);
+    if (stelle <= 0) {
+      n.remove(impiantoId);
+    } else {
+      n[impiantoId] = stelle;
+    }
+    return n;
+  });
+}
+
 /// Rifornimento in sospeso (impostato da «Portami qui», chiesto al ritorno).
 final rientroProvider = StateProvider<Rientro?>((ref) {
   final prefs = ref.watch(prefsProvider);

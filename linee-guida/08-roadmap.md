@@ -13,6 +13,7 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 | 05 · Impostazioni e account | ✅ conclusa | Schermata 4 (cinque gruppi) e Schermata 1 (accesso/registrazione/«entra senza account»). Impostazioni **funzionanti**: carburante, navigatore, ordinamento (3 vie), raggio, capacità serbatoio, escludi età — tutte persistite localmente. Manca solo la sincronizzazione (serve backend account). |
 | 06 · Fiducia | ✅ conclusa (lato app) | Segnalazione prezzo errato (coda locale), ritorno dopo il rifornimento. Lato server/processo (regola tre conferme, notifiche push, audit sul campo) documentato, da eseguire. |
 | 07 · Prova e rilascio | 🔨 materiali pronti | Documenti in `rilascio/` (privacy, scheda store, piano test). Nome app «Pieno» impostato. Restano da fare da te: account sviluppatore, prova utenti/campo, cambio bundle id, build e upload (Android → iOS). |
+| 08 · Extra | 🔨 in corso | (1) Stelle valutazione **interne** locali (esterne = API, da collegare). (3) Simbolo €/l allineato. (4) Fix foglio impianti mappa (clip + spazio switch). **Da fare:** (2) self/servito + orario — richiede modifica pipeline e rigenerazione dati; l'orario **non è nei dati MIMIT** (da definire). |
 
 ## 01 · Dati — 2–3 settimane
 

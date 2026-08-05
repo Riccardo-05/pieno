@@ -14,7 +14,7 @@ import '../../domain/risparmio.dart';
 import '../../models/carburante.dart';
 import '../../models/impianto.dart';
 import '../../state/app_state.dart';
-import '../components/carburante_pillola.dart';
+import '../components/carburante_selettore.dart';
 import '../components/chip_alternativa.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
@@ -64,7 +64,7 @@ class VicinoATeScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _rigaContesto(context, ref, dati, esito.origineRete, carburante),
+        _rigaContesto(context, ref, dati),
         const SizedBox(height: 12),
         const Align(alignment: Alignment.centerLeft, child: OrdinamentoShortcut()),
         const SizedBox(height: 12),
@@ -78,9 +78,8 @@ class VicinoATeScreen extends ConsumerWidget {
     );
   }
 
-  // Riga di contesto: luogo e data a sinistra; pillola carburante + impostazioni a destra.
-  Widget _rigaContesto(BuildContext context, WidgetRef ref, DatiProvincia dati,
-      bool rete, Carburante carburante) {
+  // Riga di contesto: luogo e data a sinistra; selettore carburante + impostazioni a destra.
+  Widget _rigaContesto(BuildContext context, WidgetRef ref, DatiProvincia dati) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -93,14 +92,7 @@ class VicinoATeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        CarburantePillola(
-          carburante: carburante,
-          onTap: () {
-            final valori = Carburante.values;
-            final prossimo = valori[(carburante.index + 1) % valori.length];
-            ref.read(carburanteProvider.notifier).state = prossimo;
-          },
-        ),
+        const CarburanteSelettore(),
         const SizedBox(width: 10),
         PulsanteTondo(
           diametro: PienoSizes.pulsanteTondoElenco,

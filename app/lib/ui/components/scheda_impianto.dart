@@ -9,6 +9,7 @@ import '../../models/impianto.dart';
 import 'bottone_primario.dart';
 import 'pastiglia_risparmio.dart';
 import 'prezzo_text.dart';
+import 'stelle_valutazione.dart';
 import 'vetro.dart';
 
 class SchedaImpianto extends StatelessWidget {
@@ -55,6 +56,8 @@ class SchedaImpianto extends StatelessWidget {
             const SizedBox(height: 2),
             Text(dist, style: PienoText.valoreDettaglio),
           ],
+          const SizedBox(height: 8),
+          StelleValutazione(impiantoId: impianto.id),
           const SizedBox(height: 12),
           FittedBox(fit: BoxFit.scaleDown, child: PrezzoText(prezzo.valore)),
           const SizedBox(height: 10),
