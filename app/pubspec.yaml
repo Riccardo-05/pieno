@@ -15,6 +15,7 @@ dependencies:
   path_provider: ^2.1.3          # cartella locale per l'ultima zona
   geolocator: ^12.0.0            # un solo GPS fix, precisione "bilanciata"
   url_launcher: ^6.3.0           # «Portami qui» apre il navigatore di sistema
+  maplibre_gl: ^0.26.0           # mappa vettoriale (pag. 6, 10); tile OpenFreeMap
   # Archivio locale: il PDF indica "Drift o Isar". Scelta rimandata alla Tappa 03;
   # per lo scheletro basta la cache su file (data/local_store.dart).
 
@@ -25,6 +26,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/map_style.json
   # Font Sora e Manrope (pag. 4): DA ATTIVARE quando i .ttf sono in assets/fonts/.
   # Per lo scheletro (Tappa 02) restano commentati: l'app gira con i font di sistema.
   # Vedi assets/fonts/README.md per i file attesi. Poi togli il commento qui sotto.

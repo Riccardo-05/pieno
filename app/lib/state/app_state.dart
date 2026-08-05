@@ -74,7 +74,11 @@ List<Impianto> ordinaPerPrezzo(List<Impianto> impianti, Carburante c) {
 /// ma finché la Mappa è un segnaposto (Tappa 04) l'avvio resta su Vicino a te.
 enum Vista { mappa, vicino }
 
-final vistaProvider = StateProvider<Vista>((ref) => Vista.vicino);
+final vistaProvider = StateProvider<Vista>((ref) => Vista.mappa);
+
+/// Impianto selezionato, condiviso tra Mappa ed elenco (pag. 3, 13): toccare un
+/// marcatore apre il foglio; tornando all'elenco resta lo stesso impianto. null = nessuno.
+final selezionatoProvider = StateProvider<String?>((ref) => null);
 
 /// Posizione dell'utente per calcolare le distanze. Un solo fix, precisione bilanciata.
 /// Se il permesso è negato resta null e le distanze non vengono mostrate.

@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
 import '../components/switch_pillola.dart';
-import 'mappa_placeholder.dart';
+import 'mappa_screen.dart';
 import 'vicino_a_te_screen.dart';
 
 class HomeShell extends ConsumerWidget {
@@ -18,10 +18,16 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vista = ref.watch(vistaProvider);
 
+    // IndexedStack tiene VIVE entrambe le viste: passare da una all'altra non ricarica
+    // nulla (pag. 3) ed evita di distruggere/ricreare la mappa a ogni switch.
+    final indice = vista == Vista.mappa ? 0 : 1;
     return Stack(
       children: [
         Positioned.fill(
-          child: vista == Vista.vicino ? const VicinoATeScreen() : const MappaPlaceholder(),
+          child: IndexedStack(
+            index: indice,
+            children: const [MappaScreen(), VicinoATeScreen()],
+          ),
         ),
         Positioned(
           left: 0,
@@ -30,11 +36,14 @@ class HomeShell extends ConsumerWidget {
           child: Center(
             child: SizedBox(
               width: 260,
-              child: SwitchPillola(
-                opzioni: const ['Mappa', 'Vicino a te'],
-                indiceSelezionato: vista == Vista.mappa ? 0 : 1,
-                onCambia: (i) => ref.read(vistaProvider.notifier).state =
-                    i == 0 ? Vista.mappa : Vista.vicino,
+              child: Material(
+                type: MaterialType.transparency,
+                child: SwitchPillola(
+                  opzioni: const ['Mappa', 'Vicino a te'],
+                  indiceSelezionato: vista == Vista.mappa ? 0 : 1,
+                  onCambia: (i) => ref.read(vistaProvider.notifier).state =
+                      i == 0 ? Vista.mappa : Vista.vicino,
+                ),
               ),
             ),
           ),

@@ -19,6 +19,7 @@ class SchedaImpianto extends StatelessWidget {
     required this.risparmioEuro,
     required this.distanzaKm,
     required this.onPortamiQui,
+    this.altezzaAzione = PienoSizes.azionePrimaria,
   });
 
   final Impianto impianto;
@@ -26,6 +27,7 @@ class SchedaImpianto extends StatelessWidget {
   final double risparmioEuro;
   final double? distanzaKm;
   final VoidCallback onPortamiQui;
+  final double altezzaAzione;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +58,7 @@ class SchedaImpianto extends StatelessWidget {
           const SizedBox(height: 10),
           PastigliaRisparmio(risparmioEuro: risparmioEuro),
           const SizedBox(height: 16),
-          BottonePrimario(testo: 'Portami qui', onTap: onPortamiQui),
+          BottonePrimario(testo: 'Portami qui', onTap: onPortamiQui, altezza: altezzaAzione),
         ],
       ),
     );
