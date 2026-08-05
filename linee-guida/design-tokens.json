@@ -1,0 +1,199 @@
+{
+  "$fonte": "Pieno Design System — pagina 4",
+  "colori": {
+    "inchiostro": {
+      "valore": "#0E1620",
+      "uso": "testo principale, filtro attivo, voce selezionata"
+    },
+    "grafite": {
+      "valore": "#77848F",
+      "uso": "testo secondario, valori nelle impostazioni"
+    },
+    "menta": {
+      "gradiente": {
+        "da": "#00C2A6",
+        "a": "#00887E",
+        "angolo": "135deg"
+      },
+      "uso": "azione primaria, marcatore migliore, interruttori attivi"
+    },
+    "menta-scura": {
+      "valore": "#00806F",
+      "uso": "testo del risparmio e azioni testuali"
+    },
+    "menta-velo": {
+      "valore": "rgba(0,179,154,0.10)",
+      "uso": "sfondo pastiglia risparmio"
+    },
+    "rame": {
+      "valore": "#C0603A",
+      "uso": "solo prezzi sopra la media di zona"
+    },
+    "blu-posizione": {
+      "valore": "#2F6BFF",
+      "uso": "solo il puntino sono qui"
+    },
+    "fondo": {
+      "valore": "#EDF2F3",
+      "valore-mappa": "#E7EDEE",
+      "uso": "fondo delle schermate"
+    },
+    "vetro": {
+      "riempimento": "rgba(255,255,255,0.72)",
+      "bordo": "rgba(255,255,255,0.85)",
+      "uso": "schede, pillole, gruppi, foglio"
+    },
+    "mappa": {
+      "terra": "#E7EDEE",
+      "isolati": "#DFE7E8",
+      "verde": "#D6E7DF",
+      "acqua": "#D3E4EA",
+      "strade": "#FFFFFF"
+    },
+    "aurore": {
+      "menta": {
+        "valore": "rgba(0,179,154,0.30)",
+        "diametro": "420px",
+        "posizione": "alto-destra"
+      },
+      "lavanda": {
+        "valore": "rgba(122,150,255,0.24)",
+        "diametro": "380px",
+        "posizione": "basso-sinistra"
+      },
+      "blur": "70px"
+    }
+  },
+  "caratteri": {
+    "famiglie": {
+      "numeri": {
+        "nome": "Sora",
+        "uso": "numeri e prezzi, peso leggero, cifre tabulari",
+        "tabular-nums": true
+      },
+      "testo": {
+        "nome": "Manrope",
+        "uso": "tutto il resto"
+      }
+    },
+    "stili": {
+      "prezzo-principale": {
+        "font": "Sora",
+        "peso": 300,
+        "dimensione": "78px",
+        "tracking": "-0.05em",
+        "tabular": true
+      },
+      "prezzo-decimali": {
+        "font": "Sora",
+        "peso": 500,
+        "dimensione": "78px"
+      },
+      "prezzo-foglio-mappa": {
+        "font": "Sora",
+        "peso": 300,
+        "dimensione": "52px"
+      },
+      "prezzo-lista": {
+        "font": "Sora",
+        "peso": 400,
+        "dimensione": "21px",
+        "tracking": "-0.03em"
+      },
+      "marcatore-mappa": {
+        "font": "Sora",
+        "peso": 400,
+        "dimensione": "15px",
+        "migliore-peso": 600,
+        "migliore-dimensione": "17px"
+      },
+      "titolo-pagina": {
+        "font": "Manrope",
+        "peso": 800,
+        "dimensione": "27px",
+        "tracking": "-0.03em"
+      },
+      "nome-impianto": {
+        "font": "Manrope",
+        "peso": 700,
+        "dimensione": "21px",
+        "tracking": "-0.015em"
+      },
+      "voce-impostazione": {
+        "font": "Manrope",
+        "peso": 600,
+        "dimensione": "15.5px"
+      },
+      "valore-dettaglio": {
+        "font": "Manrope",
+        "peso": 500,
+        "dimensione": "15px",
+        "colore": "#77848F"
+      },
+      "bottone-primario": {
+        "font": "Manrope",
+        "peso": 700,
+        "dimensione": "18-19px"
+      },
+      "occhiello-sezione": {
+        "font": "Manrope",
+        "peso": 700,
+        "dimensione": "11-12.5px",
+        "tracking": "+0.14em",
+        "maiuscolo": true
+      }
+    }
+  },
+  "raggi": {
+    "scheda-principale": "36px",
+    "scheda-campi": "32px",
+    "gruppo-impostazioni": "22px",
+    "bottone-primario": "22-26px",
+    "campo-testo": "20px",
+    "chip-alternativa": "24px",
+    "pillole-switch": "999px"
+  },
+  "ombre": {
+    "scheda-principale": "0 20 50 rgba(14,32,38,0.10)",
+    "scheda-principale-inset": "inset bianco",
+    "scheda-campi": "0 20 50 rgba(14,32,38,0.10)",
+    "gruppo-impostazioni": "0 10 26 rgba(14,32,38,0.07)",
+    "bottone-primario": "0 14 30 rgba(0,150,130,0.32)",
+    "pillole-switch": "0 8 22 rgba(14,32,38,0.10)"
+  },
+  "sfocatura-vetro": {
+    "campi": "14px",
+    "schede": "26px"
+  },
+  "spaziature": {
+    "frame": "390x812",
+    "margine-laterale-standard": "18px",
+    "margine-schermate-a-scheda": "22px",
+    "padding-pillola": "5px",
+    "gap-ricerca-filtro": "9px",
+    "offset-ricerca-dal-bordo-alto": "52px",
+    "switch-flottante-dal-bordo-inferiore": "30px",
+    "divisori-rientro": "16px"
+  },
+  "misure": {
+    "logo-accesso": "34px",
+    "campi-altezza": "56px",
+    "accessi-esterni-altezza": "54px",
+    "barra-ricerca-altezza": "48px",
+    "pulsante-tondo-elenco": "40px",
+    "pulsante-tondo-mappa": "52px",
+    "foglio-maniglia": "44x5px",
+    "bottone-foglio-altezza": "70px",
+    "azione-primaria-altezza": "74px",
+    "azione-primaria-min-max": "66-74px",
+    "target-minimo-toccabile": "50px",
+    "riga-impostazione-altezza": "50px",
+    "testata-account-altezza": "78px",
+    "avatar-account": "46px",
+    "interruttore": "48x29px",
+    "marcatore-alone": "96px",
+    "marcatore-coda-rombo": "9px",
+    "strade-principali": "17/15/13px",
+    "strade-minori": "6px"
+  }
+}

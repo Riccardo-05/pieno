@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Output della pipeline dati (rigenerabile)
+data-pipeline/build/
+
+# Sistema
+.DS_Store

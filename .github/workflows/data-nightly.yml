@@ -1,0 +1,57 @@
+# Job notturno dei dati (Roadmap 01): scarica, valida, pubblica file per provincia,
+# produce il report di qualità. GitHub Actions, CDN gratuita. Nessun server da gestire.
+name: Dati — job notturno
+
+on:
+  schedule:
+    - cron: "20 6 * * *"   # ~08:20 ora italiana; il dato MIMIT è "in vigore alle 8:00"
+  workflow_dispatch: {}      # esecuzione manuale on-demand
+
+permissions:
+  contents: read
+  pages: write           # per pubblicare su GitHub Pages
+  id-token: write        # richiesto da actions/deploy-pages
+
+concurrency:
+  group: dati-notturno
+  cancel-in-progress: false
+
+jobs:
+  costruisci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Test del validatore
+        run: python -m unittest discover -s tests -v
+
+      - name: Esegui la pipeline (scarico reale)
+        run: python -m pieno_pipeline.pipeline --scarica
+
+      - name: Prepara l'artefatto per GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: data-pipeline/build/public
+
+  # Pubblicazione su GitHub Pages (CDN gratuita, nessun server da gestire).
+  # Richiede: Settings -> Pages -> Source = "GitHub Actions" (una volta sola).
+  pubblica:
+    needs: costruisci
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy su GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

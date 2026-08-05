@@ -1,0 +1,62 @@
+# Pieno — Data pipeline (Tappa 01)
+
+Job dei dati: scarica i due CSV MIMIT, li valida con le regole di pag. 12, genera file
+statici **per provincia** (compatti e versionati) e un **report di qualità**. È la «prima
+riga da scrivere» (linee-guida/00-README.md): senza dati puliti e datati non c'è niente da
+mostrare in nessuna schermata.
+
+Catena di lavorazione (linee-guida/05-dati-e-qualita.md):
+
+```
+scarico → analisi → validazione → normalizzazione marchi →
+controllo geografico → deduplica → storico → pubblicazione atomica
+```
+
+## Requisiti
+
+- Python 3.12 (in CI) / 3.9+ in locale.
+- `pip install -r requirements.txt`
+
+## Uso
+
+```bash
+# 1) Test del validatore
+python -m unittest discover -s tests -v
+
+# 2) Esecuzione con file locali (sviluppo)
+python -m pieno_pipeline.pipeline --anagrafica anagrafica.csv --prezzi prezzo_alle_8.csv
+
+# 3) Esecuzione con scarico reale dalle URL di config.yaml
+python -m pieno_pipeline.pipeline --scarica
+```
+
+Output in `build/public/`:
+
+- `manifest.json` — versione, elenco province, sha256 per file.
+- `province/{SIGLA}.json` — impianti e prezzi della provincia (chiavi corte).
+- `report-qualita.json` / `report-qualita.md` — misure di controllo ed esito.
+
+La **pubblicazione è atomica**: si costruisce in `build/_staging/` e si scambia solo se il
+report supera le soglie verificabili (freschezza > 85%, 0 impianti senza età). Altrimenti
+resta l'ultima build valida (offline-first: «l'app continua a servire i dati del giorno prima»).
+
+## Configurazione
+
+Tutto in [`config.yaml`](config.yaml): sorgenti (sostituibili), soglie di validazione,
+parametri del risparmio e target di qualità — valori esatti da pag. 12.
+
+## Stato e limiti dichiarati
+
+- **Regola R1 (confine comunale):** richiede i poligoni ISTAT — sorgente **da definire**;
+  finché non collegata è riportata come «non verificata» nel report, non simulata.
+- **«Sette regole»:** pag. 12 cita sette regole ma ne elenca sei in tabella. La settima è
+  **da definire** (`validation.REGOLE → R7`): non inventata.
+- **Formato CSV:** vedi [`docs/formato-csv-mimit.md`](docs/formato-csv-mimit.md). Colonne da
+  riconfermare a ogni scarico reale.
+- **Pubblicazione su CDN:** la build è pronta al deploy; lo step finale su GitHub/Cloudflare
+  Pages è **da completare** nel workflow quando si sceglie l'hosting.
+
+## Attribuzioni obbligatorie
+
+Ogni file di provincia e il manifest riportano:
+«Dati: Ministero delle Imprese e del Made in Italy — IODL 2.0. © OpenStreetMap contributors.»

@@ -1,0 +1,61 @@
+# Mappa e navigazione
+
+Stile mappa, marcatori, handoff, Ferrostar (pagine 6, 9 e 13 del documento di progetto).
+
+## Stile mappa
+
+- Terra `#E7EDEE`, isolati `#DFE7E8`, verde `#D6E7DF`, acqua `#D3E4EA`.
+- Strade bianche piene: 17/15/13 px le principali, 6 px le minori.
+- Nessuna etichetta stradale: i soli testi sono i prezzi.
+- In codice: stile personalizzato con i colori di pagina 6, etichette disattivate.
+
+## Marcatori prezzo
+
+- Pillola bianca 94%, Sora 400 15 px, coda a rombo 9 px.
+- Il più conveniente è più grande (17 px, peso 600), in gradiente menta, con alone radiale Ø 96 px che lo isola.
+- Il prezzo è il marcatore. Nessuna icona di pompa: il numero è l'informazione, disegnato in un layer con gestione delle collisioni, non come widget, oltre i 50 elementi.
+- Raggruppamento sotto lo zoom 12 mostrando il minimo della zona, non il conteggio: «da 2,059» dice qualcosa, «14 impianti» no.
+
+## Comportamento della mappa
+
+- «Cerca in questa zona» quando la mappa viene spostata: nessun ricaricamento automatico che sposta i risultati sotto il dito.
+- Selezione condivisa con l'elenco: toccare un marcatore apre il foglio; tornare all'elenco mantiene lo stesso impianto in cima.
+- Permessi graduali: si spiega perché serve la posizione prima del dialogo di sistema; senza permesso si chiede una città e l'app funziona lo stesso.
+
+## Navigazione — oggi fuori (Fase 1)
+
+Le indicazioni si aprono nel navigatore del telefono. «Portami qui» passa le coordinate dell'impianto all'app scelta dall'utente: su iPhone Apple Maps, su Android Google Maps, con Waze come alternativa su entrambi. La scelta vive in Impostazioni → Mappa e navigazione → Apri con e il valore iniziale è il navigatore predefinito del dispositivo.
+
+- Costo zero e nessuna infrastruttura: nessun server di routing, nessuna quota da rispettare.
+- Nessun rischio di qualità: traffico, autovelox, ricalcolo e voce sono quelli che l'utente già conosce.
+- Nessun consumo di batteria a carico dell'app.
+- Implementazione: apertura di un URL universale con le coordinate, più un ripiego sul navigatore di sistema se l'app scelta non è installata.
+
+### Il difetto, dichiarato
+
+L'utente esce dall'app. È il motivo per cui il ritorno va progettato: alla fine del tragitto una notifica chiede se il pieno è stato fatto e se il prezzo corrispondeva. L'utente rientra, e la risposta alimenta la qualità del dato.
+
+## Navigazione — domani dentro (Fase 5)
+
+Mappa e indicazioni interamente dentro l'app. Non si costruisce un navigatore da zero: si adotta un motore già pronto e open source, vestito con questo design system.
+
+| Pezzo | Scelta |
+| --- | --- |
+| Motore turn-by-turn | Ferrostar — SDK open source con licenza BSD per iOS, Android e web, interfaccia costruita su MapLibre |
+| Calcolo del percorso | Valhalla (auto-ospitato) oppure un servizio compatibile OSRM |
+| Mappa | La stessa MapLibre già usata nella schermata 2: lo stile non cambia |
+| Voce | Sintesi vocale di sistema, nessun servizio esterno |
+
+### Condizioni per passare alla Fase 5
+
+- Un server per il calcolo dei percorsi: è la prima spesa reale del progetto.
+- Integrazione nativa: l'SDK è pensato per iOS e Android nativi, quindi va valutato il costo di adattamento al resto dell'app.
+- Un numero di utenti che giustifichi entrambe le cose.
+
+Prima di allora, uscire verso il navigatore di sistema è la scelta corretta, non un ripiego.
+
+### Nel frattempo, dentro l'app
+
+- Anteprima del percorso sulla mappa (linea, distanza, tempo) prima di consegnare al navigatore.
+- CarPlay e Android Auto con l'elenco dei prezzi: l'utente resta nell'app fino al momento di partire.
+- Avviso sul percorso: la notifica arriva prima, quando la decisione è ancora aperta.

@@ -1,0 +1,2 @@
+# Dipendenze della pipeline dati. Tutte gratuite; nessun servizio a pagamento.
+PyYAML>=6.0

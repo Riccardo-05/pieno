@@ -1,0 +1,55 @@
+# Configurazione della pipeline dati "Pieno" — Tappa 01 (Roadmap).
+# I valori numerici replicano esattamente le soglie di linee-guida/05-dati-e-qualita.md.
+# Ogni dipendenza esterna è sostituibile: le sorgenti stanno qui, dietro un'unica chiave.
+
+sorgenti:
+  # Open data MIMIT (base). URL DA VERIFICARE al primo scarico reale (Roadmap 01, task 1:
+  # "documentarne colonne, separatore e codifica").
+  mimit_anagrafica:
+    url: "https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv"
+    codifica_attesa: "utf-8"
+    separatore_atteso: ";"
+  mimit_prezzi:
+    url: "https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv"
+    codifica_attesa: "utf-8"
+    separatore_atteso: ";"
+  # Confini comunali per la regola 1 (coordinate fuori dal confine comunale dichiarato).
+  # Sorgente prevista: ISTAT (limiti amministrativi). DA DEFINIRE il file/anno esatto.
+  confini_comunali:
+    url: "da definire"                 # ISTAT limiti amministrativi comunali
+    abilitato: false                   # finché non configurato, la regola 1 è "skip" e va a report
+
+# Carburanti canonici del progetto (forma canonica: linee-guida/05-dati-e-qualita.md).
+carburanti:
+  - benzina
+  - gasolio
+  - metano
+  - gpl
+
+# Soglie di validazione — esatte da pag. 12 del documento di progetto.
+validazione:
+  prezzo_scarto_max_pct: 30            # oltre ±30% dalla mediana nazionale -> quarantena
+  salto_max_eur_litro_24h: 0.08        # salto > 0,08 €/l in 24 h -> quarantena
+  eta_massima_giorni: 2                # nessuna comunicazione da oltre 2 giorni -> escluso (regolabile)
+  dedup_distanza_metri: 25             # due impianti < 25 m con stesso marchio -> deduplica
+  # NOTA: pag. 12 elenca SEI controlli in tabella ma il testo cita "sette regole".
+  # La settima regola è "da definire": non inventata. Vedi validation.py (REGOLE).
+
+# Calcolo del risparmio (linee-guida/01-principi-ux.md, 03-schermate.md).
+risparmio:
+  base_litri: 50                       # "sul pieno" = 50 litri
+  soglia_minima_mostrata_eur: 0.50     # sotto 0,50 € la pastiglia sparisce
+  confronto: "provincia"               # MAI media regionale: dentro la provincia i prezzi variano di più
+
+# Indicatori di qualità — misure di controllo di pag. 12.
+qualita:
+  freschezza_target_pct: 85            # > 85% impianti con dato non più vecchio di 24 h
+  scarto_mediano_target_eur_litro: 0.01  # < 0,01 €/l (misurabile solo con audit sul campo)
+  segnalazioni_target_permille: 5      # < 5‰ ogni 1.000 navigazioni (misurabile solo in produzione)
+  impianti_senza_eta_ammessi: 0        # 0 impianti mostrati senza età del dato
+
+# Pubblicazione: file statici per provincia, versionati, scambio atomico.
+pubblicazione:
+  dir_staging: "build/_staging"
+  dir_pubblica: "build/public"
+  formato: "json"                      # compatto e versionato

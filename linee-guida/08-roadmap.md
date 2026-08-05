@@ -1,0 +1,76 @@
+# Roadmap
+
+Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogni tappa si chiude con qualcosa di verificabile. Non si passa alla successiva finché la precedente non produce il suo esito.
+
+## Stato di avanzamento
+
+| Tappa | Stato | Nota |
+| --- | --- | --- |
+| 01 · Dati | ✅ funzionante | Pipeline in `data-pipeline/`, validatore + report + job notturno. Manca solo il deploy su CDN pubblica (serve un remote git / scelta hosting). |
+| 02 · Scheletro dell'app | 🔨 in corso | Progetto Flutter in `app/`. Da verificare con `flutter run` (Flutter non disponibile nell'ambiente di stesura). |
+| 03–07 | ⬜ da fare | — |
+
+## 01 · Dati — 2–3 settimane
+
+- Scaricare i due CSV MIMIT e documentarne colonne, separatore e codifica.
+- Scrivere il validatore con le sette regole di pagina 12.
+- Generare i file per provincia in formato compatto e versionato.
+- Automatizzare tutto in un job notturno su GitHub Actions.
+- Pubblicare su CDN gratuita e produrre il report giornaliero di qualità.
+
+**Esito:** un URL pubblico con dati puliti e datati.
+
+## 02 · Scheletro dell'app — 2 settimane
+
+- Progetto Flutter, token di design come costanti, font Sora e Manrope.
+- Componenti di base: pillola, switch, pulsante tondo, bottone primario, scheda.
+- Archivio locale e scaricamento del file di provincia.
+- Permessi di posizione con la spiegazione prima del dialogo.
+
+**Esito:** l'app apre e mostra dati veri, senza interfaccia definitiva.
+
+## 03 · Vicino a te — 2 settimane
+
+- Calcolo del più conveniente e del risparmio sul pieno.
+- Schermata 3 completa, incluse le tre alternative.
+- «Portami qui» verso il navigatore di sistema.
+- Stato senza risultati e stato senza connessione.
+
+**Esito:** la prima versione utile a un vero automobilista.
+
+## 04 · Mappa — 3 settimane
+
+- MapLibre con stile personalizzato ed etichette ridotte.
+- Marcatori-prezzo con collisioni e raggruppamento.
+- Foglio inferiore trascinabile e selezione condivisa con l'elenco.
+- Switch flottante e stato unico tra le due viste.
+
+**Esito:** la schermata di avvio definitiva.
+
+## 05 · Impostazioni e account — 2 settimane
+
+- Schermata 4 con i cinque gruppi e la persistenza locale.
+- Schermata 1 con accesso, registrazione ed «entra senza account».
+- Sincronizzazione di preferiti e preferenze.
+- Attribuzioni di licenza e informativa privacy.
+
+**Esito:** prodotto completo nelle quattro schermate.
+
+## 06 · Fiducia — 2 settimane
+
+- Segnalazione di prezzo errato e regola delle tre conferme.
+- Notifica di ritorno dopo il rifornimento.
+- Pagina pubblica sulla qualità dei dati.
+- Primo audit sul campo su 100 impianti.
+
+**Esito:** la difesa contro la disinstallazione.
+
+## 07 · Prova e rilascio — 2 settimane
+
+- Test con cinque utenti nei tre scenari, due iterazioni.
+- Account sviluppatore, materiali per gli store, informativa.
+- Rilascio prima su Android, poi su iOS.
+
+## Dopo il rilascio
+
+Confronto lungo il percorso, CarPlay e Android Auto, tema scuro, e solo allora la valutazione della navigazione interna con Ferrostar.
