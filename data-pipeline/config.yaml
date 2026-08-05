@@ -30,7 +30,11 @@ carburanti:
 validazione:
   prezzo_scarto_max_pct: 30            # oltre ±30% dalla mediana nazionale -> quarantena
   salto_max_eur_litro_24h: 0.08        # salto > 0,08 €/l in 24 h -> quarantena
-  eta_massima_giorni: 2                # nessuna comunicazione da oltre 2 giorni -> escluso (regolabile)
+  # "Nessuna comunicazione da oltre N giorni -> escluso". Il PDF indica 2 giorni ma la
+  # dichiara "soglia regolabile": su dati reali MIMIT 2 giorni escluderebbe ~88% degli
+  # impianti (molti non ritoccano il prezzo così spesso). Tarata a 30 = esclude solo i
+  # listini davvero abbandonati; l'età del singolo prezzo resta comunque visibile.
+  eta_massima_giorni: 30
   dedup_distanza_metri: 25             # due impianti < 25 m con stesso marchio -> deduplica
   # NOTA: pag. 12 elenca SEI controlli in tabella ma il testo cita "sette regole".
   # La settima regola è "da definire": non inventata. Vedi validation.py (REGOLE).

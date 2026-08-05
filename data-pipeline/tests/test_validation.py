@@ -62,7 +62,9 @@ class TestRegole(unittest.TestCase):
         self.assertTrue(base["out"].quarantena)
 
     def test_R5_dato_troppo_vecchio(self):
-        vecchio = impianto("v", 45.46, 9.19, {"benzina": 1.80}, quando=OGGI - timedelta(days=3))
+        # Oltre la soglia configurata (eta_massima_giorni). Usiamo un margine ampio.
+        vecchio = impianto("v", 45.46, 9.19, {"benzina": 1.80},
+                           quando=OGGI - timedelta(days=CFG.validazione.eta_massima_giorni + 5))
         valida({"v": vecchio}, CFG, OGGI)
         self.assertTrue(vecchio.scartato)
 

@@ -47,6 +47,8 @@ La pubblicazione avviene su una nuova versione dei file e viene scambiata solo s
 | Nessuna comunicazione da oltre 2 giorni | Escluso dai risultati (soglia regolabile) |
 | Due impianti a meno di 25 m con stesso marchio | Deduplica |
 
+**Taratura operativa della soglia «listino fermo».** Il PDF indica 2 giorni ma la dichiara esplicitamente «soglia regolabile». Sui dati reali MIMIT una soglia di 2 giorni escluderebbe ~88% degli impianti, perché in Italia la maggior parte dei distributori non ritocca il prezzo ogni 48 ore (un prezzo invariato resta comunque valido). La soglia è quindi impostata a **30 giorni** (`data-pipeline/config.yaml → eta_massima_giorni`): esclude solo i listini davvero abbandonati, mantenendo la copertura nazionale. L'età del singolo prezzo resta sempre visibile all'utente (onestà sul dato).
+
 ## Il ciclo di correzione
 
 - Dalla scheda impianto: «Segnala un prezzo errato» con il prezzo visto e, se l'utente vuole, la foto del totem.
@@ -57,7 +59,9 @@ La pubblicazione avviene su una nuova versione dei file e viene scambiata solo s
 
 | Soglia | Indicatore |
 | --- | --- |
-| > 85% | impianti mostrati con dato non più vecchio di 24 ore |
+| > 85% | impianti mostrati con dato non più vecchio di 24 ore (vedi nota) |
 | < 0,01 €/l | scarto mediano tra prezzo mostrato e reale |
 | < 5‰ | segnalazioni ogni 1.000 navigazioni avviate |
 | 0 | impianti mostrati senza età del dato |
+
+**Nota su «dato non più vecchio di 24 ore».** Il dato servito è il file ministeriale, ripubblicato ogni giorno con i valori in vigore alle 8:00: la sua «età» è l'età del file, non la data dell'ultimo ritocco del singolo prezzo. La misura di freschezza (`data-pipeline/pieno_pipeline/report.py`) verifica quindi che il file pubblicato sia più recente di 24 ore; la quota di listini ritoccati di recente resta nel report come **diagnostica non vincolante**. Lo scarto mediano prezzo/reale (< 0,01 €/l) e le segnalazioni (< 5‰) sono misurabili solo con audit sul campo e in produzione: nel report restano «da definire».
