@@ -10,7 +10,7 @@ import '../models/impianto.dart';
 
 /// URL pubblico della build dati. DA CONFIGURARE con l'hosting scelto (Tappa 01).
 /// In sviluppo si può puntare a un server locale che serve build/public/.
-const String kBaseUrlDati = 'https://esempio.invalid/pieno'; // da definire
+const String kBaseUrlDati = 'https://riccardo-05.github.io/pieno';
 
 final repositoryProvider = Provider<ProvinceRepository>((ref) {
   final repo = ProvinceRepository(baseUrl: kBaseUrlDati);

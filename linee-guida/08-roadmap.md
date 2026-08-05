@@ -6,8 +6,8 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 
 | Tappa | Stato | Nota |
 | --- | --- | --- |
-| 01 · Dati | ✅ funzionante | Pipeline in `data-pipeline/`, validatore + report + job notturno. Manca solo il deploy su CDN pubblica (serve un remote git / scelta hosting). |
-| 02 · Scheletro dell'app | 🔨 in corso | Progetto Flutter in `app/`. Da verificare con `flutter run` (Flutter non disponibile nell'ambiente di stesura). |
+| 01 · Dati | ✅ conclusa | Pipeline in `data-pipeline/`, validatore + report + job notturno. Dati pubblici su GitHub Pages: https://riccardo-05.github.io/pieno/manifest.json |
+| 02 · Scheletro dell'app | 🔨 in corso | Progetto Flutter in `app/`, `kBaseUrlDati` collegato ai dati pubblici. Da verificare con `flutter run` (Flutter non disponibile nell'ambiente di stesura). |
 | 03–07 | ⬜ da fare | — |
 
 ## 01 · Dati — 2–3 settimane
