@@ -8,6 +8,7 @@ import '../data/location_service.dart';
 import '../data/repository.dart';
 import '../models/carburante.dart';
 import '../models/impianto.dart';
+import '../models/manifest.dart';
 
 /// URL pubblico della build dati. DA CONFIGURARE con l'hosting scelto (Tappa 01).
 /// In sviluppo si può puntare a un server locale che serve build/public/.
@@ -22,9 +23,31 @@ final repositoryProvider = Provider<ProvinceRepository>((ref) {
 /// Carburante selezionato, condiviso tra le due viste. Default: benzina.
 final carburanteProvider = StateProvider<Carburante>((ref) => Carburante.benzina);
 
-/// Sigla provincia corrente. Per lo scheletro parte da un valore fisso; la scelta
-/// per posizione arriva con la Tappa 03.
-final provinciaProvider = StateProvider<String>((ref) => 'MI');
+/// Manifest dei dati pubblici (province + baricentri). Rete → cache.
+final manifestProvider = FutureProvider<Manifest?>((ref) async {
+  final repo = ref.watch(repositoryProvider);
+  return repo.caricaManifest();
+});
+
+/// Provincia di ripiego quando non c'è né override né posizione né manifest.
+const String kProvinciaDefault = 'MI';
+
+/// Override manuale della provincia (null = automatica dalla posizione).
+final provinciaSceltaProvider = StateProvider<String?>((ref) => null);
+
+/// Provincia EFFETTIVA: override manuale se impostato; altrimenti quella col
+/// baricentro più vicino alla posizione (Tappa 04); altrimenti il default.
+final provinciaProvider = Provider<String>((ref) {
+  final scelta = ref.watch(provinciaSceltaProvider);
+  if (scelta != null) return scelta;
+  final pos = ref.watch(posizioneProvider).valueOrNull;
+  final manifest = ref.watch(manifestProvider).valueOrNull;
+  if (pos != null && manifest != null) {
+    final sigla = manifest.provinciaPiuVicina(pos.lat, pos.lon);
+    if (sigla != null) return sigla;
+  }
+  return kProvinciaDefault;
+});
 
 /// Esito del caricamento: i dati + se provengono dalla rete o dalla cache.
 class EsitoDati {

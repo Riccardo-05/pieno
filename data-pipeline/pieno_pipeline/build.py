@@ -47,6 +47,19 @@ def _record(imp: Impianto) -> dict:
     }
 
 
+def _centroide(gruppo: List[Impianto]) -> dict | None:
+    """Baricentro della provincia: media delle coordinate valide degli impianti.
+    Serve all'app per scegliere la provincia più vicina alla posizione dell'utente
+    (Tappa 04) usando i nostri stessi dati, senza servizi esterni.
+    """
+    coord = [(i.lat, i.lon) for i in gruppo if i.lat is not None and i.lon is not None]
+    if not coord:
+        return None
+    lat = sum(c[0] for c in coord) / len(coord)
+    lon = sum(c[1] for c in coord) / len(coord)
+    return {"lat": round(lat, 6), "lon": round(lon, 6)}
+
+
 def versione(data_dato: datetime | None) -> str:
     """Stringa di versione: data del dato + timestamp di build (UTC)."""
     base = (data_dato or datetime.now(timezone.utc)).strftime("%Y%m%d")
@@ -88,6 +101,7 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
             "file": f"province/{sigla}.json",
             "sha256": hashlib.sha256(blob).hexdigest(),
             "bytes": len(blob),
+            "centro": _centroide(gruppo),
         })
 
     manifest = {

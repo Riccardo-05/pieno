@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/impianto.dart';
+import '../models/manifest.dart';
 import 'local_store.dart';
 
 class ProvinceRepository {
@@ -41,6 +42,26 @@ class ProvinceRepository {
     final salvato = await _store.leggiProvincia(sigla);
     if (salvato != null) return (_parse(salvato), false);
     return (null, false);
+  }
+
+  /// Carica il manifest (elenco province + baricentri): rete → cache.
+  Future<Manifest?> caricaManifest() async {
+    try {
+      final resp = await _client
+          .get(Uri.parse('$baseUrl/manifest.json'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        await _store.salvaProvincia('_manifest', resp.body);
+        return Manifest.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+      }
+    } catch (_) {
+      // rete assente: si prova la cache
+    }
+    final salvato = await _store.leggiProvincia('_manifest');
+    if (salvato != null) {
+      return Manifest.fromJson(jsonDecode(salvato) as Map<String, dynamic>);
+    }
+    return null;
   }
 
   DatiProvincia _parse(String body) =>
