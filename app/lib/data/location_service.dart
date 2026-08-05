@@ -28,7 +28,7 @@ class LocationService {
 
     final p = await Geolocator.getCurrentPosition(
       // precisione "bilanciata", non massima (costa secondi e batteria).
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      desiredAccuracy: LocationAccuracy.medium,
     );
     return Posizione(p.latitude, p.longitude);
   }

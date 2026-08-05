@@ -13,6 +13,7 @@ class Vetro extends StatelessWidget {
     this.blur = PienoElevations.vetroBlurSchede,
     this.shadows = PienoElevations.schedaPrincipale,
     this.padding = EdgeInsets.zero,
+    this.fill = PienoColors.vetro,
   });
 
   final Widget child;
@@ -20,6 +21,9 @@ class Vetro extends StatelessWidget {
   final double blur;
   final List<BoxShadow> shadows;
   final EdgeInsets padding;
+
+  /// Riempimento del vetro. Default bianco 72%; i chip alternativa usano bianco 50%.
+  final Color fill;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,7 @@ class Vetro extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: PienoColors.vetro,
+              color: fill,
               borderRadius: r,
               border: Border.all(color: PienoColors.vetroBordo, width: 1),
             ),

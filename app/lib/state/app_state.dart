@@ -4,6 +4,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/location_service.dart';
 import '../data/repository.dart';
 import '../models/carburante.dart';
 import '../models/impianto.dart';
@@ -45,3 +46,19 @@ List<Impianto> ordinaPerPrezzo(List<Impianto> impianti, Carburante c) {
   conPrezzo.sort((a, b) => a.prezzoDi(c)!.valore.compareTo(b.prezzoDi(c)!.valore));
   return conPrezzo;
 }
+
+/// Le due viste che condividono lo stesso stato (pag. 3). Avvio previsto: Mappa,
+/// ma finché la Mappa è un segnaposto (Tappa 04) l'avvio resta su Vicino a te.
+enum Vista { mappa, vicino }
+
+final vistaProvider = StateProvider<Vista>((ref) => Vista.vicino);
+
+/// Posizione dell'utente per calcolare le distanze. Un solo fix, precisione bilanciata.
+/// Se il permesso è negato resta null e le distanze non vengono mostrate.
+final posizioneProvider = FutureProvider<Posizione?>((ref) async {
+  try {
+    return await LocationService().fixIniziale();
+  } catch (_) {
+    return null;
+  }
+});

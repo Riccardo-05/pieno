@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'design/tokens.dart';
-import 'ui/screens/boot_screen.dart';
+import 'ui/screens/home_shell.dart';
 
 void main() {
   runApp(const ProviderScope(child: PienoApp()));
@@ -29,7 +29,7 @@ class PienoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const BootScreen(),
+      home: const HomeShell(),
     );
   }
 }

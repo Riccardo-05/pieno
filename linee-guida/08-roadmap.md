@@ -7,8 +7,10 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 | Tappa | Stato | Nota |
 | --- | --- | --- |
 | 01 · Dati | ✅ conclusa | Pipeline in `data-pipeline/`, validatore + report + job notturno. Dati pubblici su GitHub Pages: https://riccardo-05.github.io/pieno/manifest.json |
-| 02 · Scheletro dell'app | 🔨 in corso | Progetto Flutter in `app/`, `kBaseUrlDati` collegato ai dati pubblici. Da verificare con `flutter run` (Flutter non disponibile nell'ambiente di stesura). |
-| 03–07 | ⬜ da fare | — |
+| 02 · Scheletro dell'app | ✅ conclusa | Progetto Flutter in `app/`, verificato con `flutter run -d chrome` su dati veri. |
+| 03 · Vicino a te | ✅ conclusa | Schermata 3 completa: più conveniente, risparmio sul pieno, tre alternative, «Portami qui», stati vuoto/offline. Provata su Chrome. Provincia fissa a MI (vedi Tappa 04). |
+| 04 · Mappa | ⬜ da fare | Include la **selezione della provincia dalla posizione** (rinviata dalla Tappa 03): capire in che provincia si trova l'utente e caricare il file giusto. |
+| 05–07 | ⬜ da fare | — |
 
 ## 01 · Dati — 2–3 settimane
 
