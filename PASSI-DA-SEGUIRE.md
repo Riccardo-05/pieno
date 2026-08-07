@@ -9,15 +9,17 @@ davvero: ogni verifica esiste perché saltandola il problema si scopre più tard
 
 ## Dove sei adesso
 
-Già fatto e verificato:
+**Parti 1, 2 e 3 concluse.** Il servizio è in esercizio e l'app gira sull'iPhone con le
+distanze reali. Verificato: `https://percorsi.pienocarburanti.com/v1/salute` risponde dai
+dati mobili con certificato valido, il motore non è esposto (`/route` e `/table` danno 404),
+e tutto riparte da solo dopo lo spegnimento notturno — Docker al login, motore col
+`--restart`, API e tunnel come servizi.
 
-- il motore OSRM gira in Docker, raggiungibile **solo** da dentro la macchina;
-- l'API risponde sulle tre rotte, con cache, limite di frequenza e nessun log delle posizioni;
-- l'app sa parlarci, con tetto di due secondi e ripiego dichiarato;
-- le due attività pianificate sono registrate (`Pieno - API percorsi`, `Pieno - Ricostruzione grafo`);
-- `cloudflared` è installato.
+Questo documento resta per **rifare la procedura da zero** (macchina nuova, reinstallazione)
+e per i due inciampi d'ambiente in fondo, che sono la parte che nessuno indovina.
 
-Manca: il dominio, il tunnel, e vedere l'app funzionare sul telefono.
+Quello che resta aperto non sta qui: i difetti noti sono nel registro
+[`revisione/REVISIONE.md`](revisione/REVISIONE.md), sezione Z.
 
 **Due macchine.** Il **PC Windows** (`Magicnuc`, 192.168.1.254) fa il server: parti 1 e 2.
 Il **Mac** serve solo a mandare l'app sull'iPhone: parte 3.

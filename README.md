@@ -68,7 +68,7 @@ sapere chi sei.
 | --- | --- |
 | App | Flutter · Riverpod · MapLibre |
 | Dati | Python, GitHub Actions, GitHub Pages |
-| Percorsi | OSRM auto-ospitato + API in Go (`percorsi/`) — manca solo l'esposizione |
+| Percorsi | OSRM auto-ospitato + API in Go (`percorsi/`), su `percorsi.pienocarburanti.com` |
 | Fonte | [Open data MIMIT](https://www.mimit.gov.it) (IODL 2.0) · mappa © OpenStreetMap |
 
 **Dati pubblici, live:** [`manifest.json`](https://riccardo-05.github.io/pieno/manifest.json)
@@ -87,7 +87,10 @@ python -m pieno_pipeline.pipeline --scarica
 ## Stato
 
 Le quattro schermate — Accesso, Mappa, Vicino a te, Impostazioni — sono complete e
-funzionanti su dati veri. Manca il passo finale: pubblicazione sugli store.
+funzionanti su dati veri, e l'app gira su iPhone. Le **distanze su strada** sono in
+esercizio: le calcola un servizio nostro su `percorsi.pienocarburanti.com`, e quando non
+risponde l'app ricade sulla stima dichiarandolo. Manca il passo finale: pubblicazione sugli
+store.
 
 Documentazione per chi mette le mani nel codice: il design system e le regole di progetto
 in [`linee-guida/`](linee-guida), il job dati in [`data-pipeline/`](data-pipeline), l'app in

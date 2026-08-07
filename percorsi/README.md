@@ -129,14 +129,19 @@ Il grafo copre 31,9 milioni di coordinate e 21,0 milioni di archi.
 L'estrazione è il collo di bottiglia, ed è quella che vuole i 16 GB: con il default di WSL
 (metà della RAM fisica) su questa macchina passerebbe, ma con poco margine.
 
-## Esporre il servizio (Fase 3) — in attesa del dominio
+## Esposizione (Fase 3) — attiva
 
-`cloudflared` è installato. Manca **una zona su Cloudflare**, cioè un dominio (~10 €/anno
-al costo su Cloudflare Registrar): il Tunnel la richiede. Non è una spesa solo per questo —
-l'informativa privacy deve comunque stare a un URL pubblico per le schede store.
+Il servizio è pubblico su **`https://percorsi.pienocarburanti.com`**, via Cloudflare Tunnel
+installato come servizio di Windows. Il demone apre una connessione **in uscita**: nessuna
+porta aperta sul modem, IP di casa invisibile, certificati automatici.
 
-Il demone apre una connessione **in uscita** e Cloudflare pubblica il nome con HTTPS valido:
-nessuna porta aperta sul modem, IP di casa invisibile, certificati automatici.
+Verificato dall'esterno: `/v1/salute` risponde con certificato valido, `/route` e `/table`
+danno 404 — il motore non è esposto.
+
+La procedura completa, con i due inciampi d'ambiente in cui siamo incappati (la porta 5000
+che Windows si riprende, e `cloudflared service install` che registra il servizio senza
+dirgli cosa eseguire), è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md). Qui sotto
+resta il riassunto, per rifarla da zero.
 
 ```powershell
 cloudflared tunnel login                      # apre il browser, scegli la zona

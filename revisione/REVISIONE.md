@@ -13,6 +13,35 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 
 ---
 
+## Z · Aperti dopo la messa in servizio dei percorsi (7 agosto 2026)
+
+Trovati usando l'app su iPhone con le distanze reali, non leggendo il codice.
+
+- [ ] 🔴 **Z1 — «Portami qui» finisce sotto lo switch flottante.** Nel foglio della mappa,
+  ad altezza di riposo, l'azione primaria della schermata è coperta dalla pillola
+  «Mappa | Vicino a te». La lista ha già la riserva `kSpazioSwitchFlottante` in coda, ma
+  serve solo a fine scorrimento: a riposo la scheda è più alta della porzione visibile e il
+  bottone cade proprio sotto lo switch. Misure sullo screenshot: scheda ~378 pt + maniglia
+  ~26, riserva switch ~80, disponibili 440 a 0,52 → ne servirebbero ~484 (0,58). Tre strade:
+  alzare l'altezza di riposo, accorciare la scheda, spostare lo switch. È una scelta di
+  design, non un aggiustamento.
+- [ ] 🟡 **Z2 — I marcatori-prezzo passano sotto i comandi in alto.** Una pillola vicina al
+  bordo superiore finisce dietro l'ordinamento o il selettore carburante. Per costruzione:
+  i marcatori sono un layer della mappa, i comandi ci galleggiano sopra. Si attenua con un
+  margine di sicurezza in `_centroVisibile`, non si elimina.
+- [ ] 🟡 **Z3 — La pastiglia del risparmio sparisce su impianti lontani. DA VERIFICARE se
+  è il comportamento previsto.** Con la Fase 6 il risparmio è al netto della deviazione e
+  la soglia di visibilità resta 0,50 €: su un impianto ~13 km più lontano del più vicino la
+  deviazione vale ~1,27 € e se lo mangia. Prova che discrimina: portare «Consumo medio» a
+  3,0 l/100 km e vedere se la pastiglia torna. Se torna, funziona come previsto e la voce
+  si chiude; se non torna, c'è dell'altro.
+
+Da valutare, non un difetto: oggi la deviazione si paga **rispetto all'impianto più vicino
+in assoluto**, anche se è uno dove non andresti mai. Misurarla rispetto a quello che
+sceglieresti comunque sarebbe più fedele al vero, ma cambia la sostanza del calcolo.
+
+---
+
 ## A · Struttura & organizzazione
 
 - [x] 🟠 **A1 — `mappa_screen.dart` troppo grande.** Estratti `ui/map/pillole.dart`,

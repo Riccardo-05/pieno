@@ -38,10 +38,14 @@ strada e risparmio al netto della deviazione. Piano completo e stato in
 [`../percorsi/`](../percorsi). È anche il server su cui arriveranno, dopo, segnalazioni e
 account.
 
-**Cinque fasi su sei sono chiuse.** Resta da fare **da te**: comprare un dominio
-(~10 €/anno) e alzare il Cloudflare Tunnel — è la Fase 3, e serve comunque, perché
-l'informativa privacy deve stare a un URL pubblico per le schede store. Fino ad allora
-l'app usa la stima e lo dichiara.
+**Tutte e sei le fasi sono chiuse**, e il servizio è in esercizio su
+`percorsi.pienocarburanti.com`: risponde da fuori casa con certificato valido, riparte da
+solo dopo lo spegnimento notturno, e il motore non è esposto. L'app mostra distanze su
+strada e risparmio al netto della deviazione; quando il server non c'è ricade sulla stima
+e lo dichiara.
+
+La procedura di messa in servizio, con le verifiche e i due inciampi d'ambiente in cui
+siamo incappati, è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md).
 
 Il **costo della deviazione** non è più «da definire»: la formula è `costoDeviazione()` in
 `app/lib/domain/risparmio.dart`, e la voce «Consumo medio» è nel gruppo Rifornimento.
