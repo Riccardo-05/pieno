@@ -311,6 +311,7 @@ pretendono prima della pubblicazione:
 
 | Sintomo | Dove guardare |
 | --- | --- |
+| `"stato":"degradato"` ma Docker è acceso | Windows si è ripreso la porta 5000 — vedi sotto |
 | `"stato":"degradato"` | Docker non è partito. Aprilo e aspetta un minuto |
 | Nessuna risposta sulla 8080 | `Get-ScheduledTask -TaskName "Pieno*"`, poi `Start-ScheduledTask -TaskName "Pieno - API percorsi"` |
 | Il dominio non risponde | `Get-Service cloudflared`; se non è `Running`, vedi il punto 17 |
@@ -330,3 +331,47 @@ Get-Service cloudflared
 ```
 
 Il registro della ricostruzione mensile finisce in `percorsi\log\ricostruzione-AAAA-MM-GG.log`.
+
+## Quando Windows si riprende la porta 5000
+
+Sintomo: Docker è acceso, il container risulta `Up`, ma l'API dice `"stato":"degradato"`.
+Prova del nove — questa riga deve mostrare `127.0.0.1:5000->5000/tcp`:
+
+```bash
+docker ps --filter name=pieno-osrm --format '{{.Ports}}'
+```
+
+Se mostra solo `5000/tcp`, la porta non è pubblicata. Hyper-V si riserva intervalli di
+porte che **ricalcola a ogni accensione**, e ogni tanto ci finisce dentro la 5000.
+
+Rimedio definitivo, una volta sola, da **PowerShell come amministratore**:
+
+```powershell
+net stop winnat
+netsh int ipv4 add excludedportrange protocol=tcp startport=5000 numberofports=1 store=persistent
+net start winnat
+```
+
+Poi ricrea il container (Git Bash, dalla radice del progetto):
+
+```bash
+export MSYS_NO_PATHCONV=1
+docker rm -f pieno-osrm
+docker run -d --name pieno-osrm --restart unless-stopped \
+  -v "$(cat percorsi/.grafo-attivo):/data" -p 127.0.0.1:5000:5000 \
+  ghcr.io/project-osrm/osrm-backend:latest \
+  osrm-routed --algorithm mld --max-table-size 1000 --max-matching-size 100 /data/italy-latest.osrm
+```
+
+Per controllare che la riserva sia nostra:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+Deve comparire una riga `5000  5000` con un **asterisco**: significa esclusione amministrata,
+cioè assegnata a noi e non più riassegnabile da Windows.
+
+> Questa riserva è già stata fatta su questa macchina il 7 agosto 2026. È scritta qui perché
+> sopravviva a una reinstallazione, e perché il sintomo — «Docker è acceso ma il motore non
+> c'è» — non porta da nessuna parte se non si sa dove guardare.

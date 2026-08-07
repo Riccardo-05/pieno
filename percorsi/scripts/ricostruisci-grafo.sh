@@ -94,6 +94,27 @@ docker run -d --name "$CONTENITORE" --restart unless-stopped \
   -v "$volume:/data" -p 127.0.0.1:5000:5000 "$IMMAGINE" \
   osrm-routed --algorithm mld --max-table-size 1000 --max-matching-size 100 /data/italy-latest.osrm >/dev/null
 
+# Lo scambio e' l'unico momento in cui la macchina resta senza motore, e dura
+# pochi secondi. Se il nuovo non si alza si deve saperlo subito e con il rimedio
+# in chiaro: un fallimento silenzioso qui lascerebbe l'app sulla stima per
+# settimane senza che nessuno colleghi le due cose.
+in_piedi=no
+for _ in $(seq 1 20); do
+  sleep 3
+  case "$(curl -s "http://127.0.0.1:5000/nearest/v1/driving/9.190000,45.464000" || true)" in
+    *'"code":"Ok"'*) in_piedi=si; break ;;
+  esac
+done
+if [ "$in_piedi" != si ]; then
+  dire "ATTENZIONE: il grafo e' nuovo ma il motore non risponde sulla porta 5000."
+  dire "Porte pubblicate: $(docker ps --filter name=$CONTENITORE --format '{{.Ports}}')"
+  dire "Se le porte sono vuote, Windows si e' ripreso la 5000. Da PowerShell amministratore:"
+  dire "  net stop winnat"
+  dire "  netsh int ipv4 add excludedportrange protocol=tcp startport=5000 numberofports=1 store=persistent"
+  dire "  net start winnat"
+  morire "motore non raggiungibile dopo lo scambio"
+fi
+
 echo -n "$volume" > "$STATO"
 docker run --rm -v "$volume:/data" alpine:3 cat /data/versione-grafo.txt > "$QUI/versione-grafo.txt"
 dire "fatto. Grafo attivo: $volume — $(cat "$QUI/versione-grafo.txt")"
