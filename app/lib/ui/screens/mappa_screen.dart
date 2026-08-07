@@ -51,7 +51,9 @@ const _layersToccabili = {'prezzi-testo', 'prezzi-migliore', 'prezzi-selezionato
 // più un margine perché il bottone «Portami qui» si intraveda e inviti a salire.
 // _foglioMin resta l'altezza "da parte", per guardare la mappa.
 const double _foglioMin = 0.30;
-const double _foglioMedio = 0.52;
+// Definita in state/app_state.dart: la stessa misura serve al foglio, ai comandi
+// che gli stanno appena sopra e al centro visibile della mappa. Una sola volta.
+const double _foglioMedio = kFoglioMedio;
 const double _foglioMax = 0.92;
 
 // Quante righe mostrare sotto la scheda. L'elenco completo di una provincia arriva a

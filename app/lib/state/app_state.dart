@@ -254,7 +254,19 @@ final selezionatoProvider = StateProvider<String?>((ref) => null);
 /// Altezza corrente del foglio prezzi della mappa, come frazione dello schermo (0–1).
 /// I comandi e lo switch flottante si posizionano SOPRA il foglio seguendo questo valore
 /// (pag. 6: "lo switch resta sopra il foglio; se il foglio sale, scompare in dissolvenza").
-final foglioExtentProvider = StateProvider<double>((ref) => 0.46);
+/// Altezza di riposo del foglio, come frazione dello schermo: quella con cui la
+/// Mappa si apre. Sta qui e non nella schermata perché è **la stessa misura** da
+/// cui dipendono tre cose: l'altezza iniziale del foglio, la posizione dei
+/// comandi flottanti che gli stanno appena sopra, e il calcolo del centro
+/// visibile della mappa.
+///
+/// Quando era scritta due volte le due copie sono divergute (0,52 nel foglio,
+/// 0,46 qui): all'avvio i comandi si posizionavano 6 punti percentuali più in
+/// basso del bordo del foglio — una cinquantina di pixel — e ci finivano dentro
+/// fino al primo trascinamento, che era l'unica cosa capace di riallinearli.
+const double kFoglioMedio = 0.52;
+
+final foglioExtentProvider = StateProvider<double>((ref) => kFoglioMedio);
 
 /// Consenso dell'utente a usare la posizione, chiesto DENTRO l'app prima del dialogo
 /// di sistema ("permessi graduali", pag. 13): null = mai chiesto, true = ha accettato,
