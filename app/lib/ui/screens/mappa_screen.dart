@@ -578,16 +578,68 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
               tiltGesturesEnabled: false,
             ),
           ),
-          // Comandi flottanti: stanno SOPRA il foglio e ne seguono l'altezza. In un
-          // Consumer isolato, così la mappa non si ridisegna a ogni frame del trascinamento.
-          Positioned.fill(child: _controlli(topSicuro)),
+          // I comandi in alto stanno SOTTO il foglio: quando il foglio si apre del
+          // tutto è giusto che li copra.
+          Positioned.fill(child: _controlliAlto(topSicuro)),
           _foglio(),
+          // I comandi in basso stanno SOPRA il foglio, e non è un dettaglio: ne
+          // seguono l'altezza, ma l'altezza che leggono arriva da un provider che
+          // durante il trascinamento è di un frame indietro rispetto al foglio vero.
+          // Sotto, in quel frame sparirebbero dietro il foglio — che è il difetto
+          // che si vedeva. Sopra, al peggio si sovrappongono per un istante.
+          Positioned.fill(child: _controlliBasso()),
         ],
       ),
     );
   }
 
-  Widget _controlli(double topSicuro) {
+  /// Ordinamento, carburante e «cerca in questa zona»: ancorati in alto, non
+  /// seguono il foglio. Vengono disegnati **prima** del foglio, così un foglio
+  /// tutto aperto li copre invece di lasciarli galleggiare sopra la lista.
+  Widget _controlliAlto(double topSicuro) {
+    return Stack(
+      children: [
+        Positioned(
+          top: topSicuro,
+          left: PienoSpacing.margineLaterale,
+          child: const OrdinamentoShortcut(),
+        ),
+        Positioned(
+          top: topSicuro,
+          right: PienoSpacing.margineLaterale,
+          child: const CarburanteSelettore(),
+        ),
+        if (_mostraCerca)
+          Positioned(
+            top: topSicuro + 52,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Material(
+                color: PienoColors.inchiostro,
+                borderRadius: BorderRadius.circular(PienoRadii.pillola),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(PienoRadii.pillola),
+                  onTap: _cercaInQuestaZona,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    child: Text('Cerca in questa zona',
+                        style: PienoText.voceImpostazione
+                            .copyWith(color: const Color(0xFFFFFFFF))),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Attribuzione obbligatoria e comandi tondi: stanno appena sopra il bordo del
+  /// foglio e ne seguono l'altezza. In un Consumer isolato, così la mappa non si
+  /// ridisegna a ogni frame del trascinamento. Sfumano quando il foglio è quasi
+  /// aperto, quindi disegnarli sopra di esso non li fa mai finire sulla lista.
+  Widget _controlliBasso() {
     return Consumer(
       builder: (context, ref, _) {
         final h = MediaQuery.of(context).size.height;
@@ -596,40 +648,6 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         final espanso = ext > 0.66; // foglio quasi aperto: i comandi bassi sfumano
         return Stack(
           children: [
-            Positioned(
-              top: topSicuro,
-              left: PienoSpacing.margineLaterale,
-              child: const OrdinamentoShortcut(),
-            ),
-            Positioned(
-              top: topSicuro,
-              right: PienoSpacing.margineLaterale,
-              child: const CarburanteSelettore(),
-            ),
-            if (_mostraCerca)
-              Positioned(
-                top: topSicuro + 52,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Material(
-                    color: PienoColors.inchiostro,
-                    borderRadius: BorderRadius.circular(PienoRadii.pillola),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(PienoRadii.pillola),
-                      onTap: _cercaInQuestaZona,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        child: Text('Cerca in questa zona',
-                            style: PienoText.voceImpostazione
-                                .copyWith(color: const Color(0xFFFFFFFF))),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // Attribuzione obbligatoria e comandi tondi: appena SOPRA il foglio; sfumano
-            // quando il foglio è quasi aperto per non finire sopra i controlli in alto.
             Positioned(
               left: PienoSpacing.margineLaterale,
               bottom: sopraFoglio,
