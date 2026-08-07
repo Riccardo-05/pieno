@@ -55,6 +55,22 @@ job notturno **recupera la build precedente** (cache di GitHub Actions,
 (`storico_disponibile`, `storico_impianti`). Assente alla primissima esecuzione è normale;
 assente dopo, è un guasto da riparare.
 
+**«Fino alla conferma» vuol dire che il prezzo si conserva.** La quarantena ha due metà, e
+la seconda ha bisogno di memoria: il prezzo sospeso oggi va confrontato *con sé stesso*
+domani, altrimenti non può essere confermato. Finché lo storico si ricostruiva dai soli
+file di provincia questo non poteva succedere — il prezzo in quarantena non viene
+pubblicato, quindi non ci finiva — e il confronto del giorno dopo ripartiva dal valore
+vecchio: un rialzo di mercato vero restava invisibile **finché il salto non rientrava da
+sé**. I prezzi sospesi vivono quindi in `Impianto.prezzi_in_quarantena` e vengono scritti
+in `storico.json`: il secondo giorno il prezzo non si mostra, il terzo — se il gestore
+conferma — torna al suo posto.
+
+**Le date portano il fuso.** I CSV ministeriali sono in ora italiana e non lo dichiarano.
+La pipeline scrive `dato_del` e il campo `t` di ogni prezzo in ISO-8601 **con l'offset**
+(`2026-08-05T08:00:00+02:00`): un istante senza fuso non è un istante, è un numero, e il
+telefono lo rileggeva come ora propria — giusta per caso in Italia d'inverno, sbagliata di
+un'ora d'estate e di più per chi è all'estero.
+
 **Taratura operativa della soglia «listino fermo».** Il PDF indica 2 giorni ma la dichiara esplicitamente «soglia regolabile». Sui dati reali MIMIT una soglia di 2 giorni escluderebbe ~88% degli impianti, perché in Italia la maggior parte dei distributori non ritocca il prezzo ogni 48 ore (un prezzo invariato resta comunque valido). La soglia è quindi impostata a **30 giorni** (`data-pipeline/config.yaml → eta_massima_giorni`): esclude solo i listini davvero abbandonati, mantenendo la copertura nazionale. L'età del singolo prezzo resta sempre visibile all'utente (onestà sul dato).
 
 ## Il ciclo di correzione

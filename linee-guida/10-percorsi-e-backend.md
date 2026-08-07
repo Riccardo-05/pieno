@@ -88,8 +88,16 @@ Ognuna si chiude con qualcosa di verificabile. Non si passa alla successiva prim
 | 5 · Fattori stradali | ✅ conclusa | `percorsi/cmd/fattori` calcola il rapporto mediano; la pipeline lo incorpora come `fs` (`--fattori`); l'app lo usa nella stima. |
 | 6 · Risparmio netto | ✅ conclusa | `costoDeviazione()` e la voce «Consumo medio» nel gruppo Rifornimento. Il risparmio mostrato è netto quando le distanze sono reali. |
 
-Tutte e sei le fasi sono chiuse. Resta da vedere l'app sull'iPhone con le distanze vere:
-la procedura è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md), parte 3.
+| 7 · La classifica usa i km veri | ✅ conclusa | Le sei fasi sopra avevano lasciato indietro proprio la cosa da cui il piano era nato: `ordina()` continuava a calcolare l'Haversine anche con le distanze reali in mano. Ora ordina con i chilometri migliori disponibili per ciascun impianto — gli stessi che la scheda mostra. Vedi Y3 in [`../revisione/REVISIONE.md`](../revisione/REVISIONE.md). |
+
+Tutte le fasi sono chiuse. La settima non era prevista: è emersa dalla revisione dell'8
+agosto 2026, quando si è visto che il difetto originale — «le distanze in linea d'aria
+falsano la classifica», la prima riga di questo documento — era sopravvissuto a tutte e
+sei. Il servizio funzionava, la scheda mostrava i chilometri di strada, ma la lista si
+ordinava ancora col righello: un piano può dirsi concluso e lasciare aperto il problema
+per cui era nato.
+
+Resta da vedere l'app sull'iPhone con le distanze vere.
 
 Due cose che l'ambiente ha imposto e che il piano non prevedeva, entrambe scritte nei passi
 perché il sintomo non porta da nessuna parte se non si sa dove guardare:

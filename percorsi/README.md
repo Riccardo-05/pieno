@@ -94,6 +94,20 @@ PERCORSI_ASCOLTO=127.0.0.1:8080 ./percorsi.exe
 | `PERCORSI_RAFFICA` | `30` | richieste di raffica per client |
 | `PERCORSI_AL_MINUTO` | `60` | ricarica, richieste al minuto |
 | `PERCORSI_FILE_VERSIONE` | `versione-grafo.txt` | riga letta da `/v1/salute` |
+| `PERCORSI_PROXY_FIDATI` | la macchina stessa | reti CIDR da cui si crede a `CF-Connecting-IP` |
+
+**Sul proxy fidato.** Il limite di frequenza distingue i client dall'indirizzo, e dietro il
+tunnel l'unico modo per distinguerli è l'intestazione `CF-Connecting-IP`. Ma crederle
+sempre significa non avere un limite: chi parla direttamente col servizio ci scrive quello
+che vuole, ne cambia uno a ogni richiesta e ottiene un secchio di gettoni nuovo ogni volta
+— per giunta facendo crescere la mappa dei secchi più in fretta di quanto `Pulisci` la
+sfoltisca. Perciò l'intestazione vale **solo** se la richiesta arriva da una rete elencata
+qui. Il valore predefinito — `127.0.0.0/8` e `::1/128` — è la configurazione di casa, dove
+cloudflared gira sulla stessa macchina. Se un giorno il proxy si sposta, va dichiarato:
+
+```
+PERCORSI_PROXY_FIDATI=10.0.0.0/8,192.168.1.0/24
+```
 
 OSRM è pubblicato **solo su `127.0.0.1:5000`**: non è raggiungibile dalla rete locale, e il
 tunnel della Fase 3 punta all'API, non al motore.

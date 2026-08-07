@@ -89,8 +89,9 @@ python -m pieno_pipeline.pipeline --scarica
 Le quattro schermate — Accesso, Mappa, Vicino a te, Impostazioni — sono complete e
 funzionanti su dati veri, e l'app gira su iPhone. Le **distanze su strada** sono in
 esercizio: le calcola un servizio nostro su `percorsi.pienocarburanti.com`, e quando non
-risponde l'app ricade sulla stima dichiarandolo. Manca il passo finale: pubblicazione sugli
-store.
+risponde l'app ricade sulla stima dichiarandolo. Da quelle stesse distanze dipende ora
+anche **l'ordine dell'elenco**, non solo il numero scritto sulla scheda: il primo della
+lista è il più vicino di strada. Manca il passo finale: pubblicazione sugli store.
 
 Documentazione per chi mette le mani nel codice: il design system e le regole di progetto
 in [`linee-guida/`](linee-guida), il job dati in [`data-pipeline/`](data-pipeline), l'app in

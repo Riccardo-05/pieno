@@ -43,13 +43,26 @@ python -m pieno_pipeline.pipeline --scarica
 
 Output in `build/public/`:
 
-- `manifest.json` — versione, elenco province, sha256 per file.
+- `manifest.json` — versione, elenco province, sha256 per file. Ogni provincia porta il
+  **baricentro** e il **riquadro** che contiene i suoi impianti: il secondo serve all'app
+  per non sbagliare provincia sui confini, dove il baricentro da solo manda chi sta alle
+  porte di Monza su Milano.
 - `province/{SIGLA}.json` — impianti e prezzi della provincia (chiavi corte).
+- `storico.json` — tutti i prezzi letti oggi, **compresi quelli in quarantena**. Non è un
+  file per l'app: è la memoria che serve alla regola R4 (vedi sotto).
 - `report-qualita.json` / `report-qualita.md` — misure di controllo ed esito.
+
+Le date (`dato_del` e il campo `t` di ogni prezzo) escono in ISO-8601 **con l'offset**,
+p.es. `2026-08-05T08:00:00+02:00`. I CSV ministeriali sono in ora italiana e non lo dicono:
+scriverle così com'erano voleva dire che il telefono le rileggeva come ora *sua* — giusta
+per caso in Italia d'inverno, sbagliata di un'ora d'estate e di più all'estero.
 
 La **pubblicazione è atomica**: si costruisce in `build/_staging/` e si scambia solo se il
 report supera le soglie verificabili (freschezza > 85%, 0 impianti senza età). Altrimenti
-resta l'ultima build valida (offline-first: «l'app continua a servire i dati del giorno prima»).
+resta l'ultima build valida (offline-first: «l'app continua a servire i dati del giorno
+prima»). Lo scambio rinomina due directory, quindi un istante senza `build/public/` esiste
+per forza; se però il secondo spostamento fallisce, il giorno prima torna al suo posto
+invece di restare sotto un altro nome.
 
 ## Configurazione
 
@@ -59,10 +72,18 @@ parametri del risparmio e target di qualità — valori esatti da pag. 12.
 ## Storico e regola R4
 
 La regola R4 (salto > 0,08 €/l in 24 h) confronta i prezzi con quelli dell'ultima build:
-`sources.carica_storico()` li rilegge da `build/public/province/*.json`. In locale funziona
-da sé dalla seconda esecuzione in poi; in CI il job **recupera la build precedente** con la
-cache di GitHub Actions, altrimenti ripartirebbe da zero ogni notte e la regola non
-scatterebbe mai.
+`sources.carica_storico()` li rilegge da `build/public/storico.json`, e ripiega sui file di
+provincia per le build fatte prima che quel file esistesse. In locale funziona da sé dalla
+seconda esecuzione in poi; in CI il job **recupera la build precedente** con la cache di
+GitHub Actions, altrimenti ripartirebbe da zero ogni notte e la regola non scatterebbe mai.
+
+**Perché serve un file a parte.** La regola dice «quarantena fino alla conferma del giorno
+dopo», e la seconda metà ha bisogno di memoria. Finché lo storico si ricostruiva dai file
+di provincia, il prezzo messo in quarantena non ci finiva mai — non viene pubblicato — e il
+giorno dopo il confronto ripartiva dal valore vecchio: un rialzo di mercato vero restava
+invisibile *finché il salto non rientrava da sé*. Ora i prezzi sospesi vivono in
+`Impianto.prezzi_in_quarantena` e finiscono in `storico.json`: il secondo giorno il prezzo
+non si mostra, il terzo — se confermato — torna al suo posto.
 
 Il report dichiara sempre l'esito: `storico_disponibile` e `storico_impianti` nelle misure
 di controllo, più un avviso su stderr. Storico assente alla prima esecuzione è normale;
