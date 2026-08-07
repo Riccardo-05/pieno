@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -187,6 +188,53 @@ func TestLimiteDiFrequenzaSiDichiara(t *testing.T) {
 	var e erroreJSON
 	if err := json.Unmarshal(rec.Body.Bytes(), &e); err != nil || e.Codice != "troppe_richieste" {
 		t.Fatalf("corpo dell'errore = %s", rec.Body.String())
+	}
+}
+
+// chiamaDa è come chiama, ma dice da quale indirizzo arriva la richiesta e con
+// quali intestazioni: serve a distinguere il proxy di casa da uno sconosciuto.
+func chiamaDa(t *testing.T, h http.Handler, remoto, corpo string, intestazioni map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/distanze", strings.NewReader(corpo))
+	req.RemoteAddr = remoto
+	for chiave, valore := range intestazioni {
+		req.Header.Set(chiave, valore)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// Un client qualunque non deve poter cambiare identità a piacere: se bastasse
+// scrivere un'intestazione per avere un secchio nuovo, il limite non esisterebbe.
+func TestIntestazioneDelProxyIgnorataDaChiNonEIlProxy(t *testing.T) {
+	h := servizioDiProva(t, &motoreFinto{vivo: true}, Config{RafficaClient: 2, RichiesteAlMinuto: 1})
+	corpo := `{"origine":{"lat":45.464,"lon":9.190},"destinazioni":[{"lat":45.478,"lon":9.227}]}`
+
+	var ultimo *httptest.ResponseRecorder
+	for i := 0; i < 5; i++ {
+		ultimo = chiamaDa(t, h, "203.0.113.7:5000", corpo,
+			map[string]string{"CF-Connecting-IP": "198.51.100." + strconv.Itoa(i)})
+	}
+
+	if ultimo.Code != http.StatusTooManyRequests {
+		t.Fatalf("stato = %d, atteso 429: l'intestazione di un client non fidato non deve valere", ultimo.Code)
+	}
+}
+
+// Dietro il tunnel, invece, l'intestazione è l'unica cosa che distingue due
+// utenti diversi: lì va creduta, altrimenti il primo che passa limita tutti.
+func TestIntestazioneDelProxyCredutaDalProxy(t *testing.T) {
+	h := servizioDiProva(t, &motoreFinto{vivo: true}, Config{RafficaClient: 2, RichiesteAlMinuto: 1})
+	corpo := `{"origine":{"lat":45.464,"lon":9.190},"destinazioni":[{"lat":45.478,"lon":9.227}]}`
+
+	for i := 0; i < 3; i++ {
+		chiamaDa(t, h, "127.0.0.1:5000", corpo, map[string]string{"CF-Connecting-IP": "198.51.100.1"})
+	}
+	altro := chiamaDa(t, h, "127.0.0.1:5000", corpo, map[string]string{"CF-Connecting-IP": "198.51.100.2"})
+
+	if altro.Code != http.StatusOK {
+		t.Fatalf("stato = %d, atteso 200: un altro utente dietro lo stesso tunnel ha il suo secchio", altro.Code)
 	}
 }
 

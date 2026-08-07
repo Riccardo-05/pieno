@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,7 +36,11 @@ func main() {
 			RafficaClient:     intero("PERCORSI_RAFFICA", 30),
 			RichiesteAlMinuto: float64(intero("PERCORSI_AL_MINUTO", 60)),
 			FileVersione:      ambiente("PERCORSI_FILE_VERSIONE", "versione-grafo.txt"),
-			Log:               registro,
+			// Chi può dichiarare l'indirizzo di qualcun altro. Vuoto = solo questa
+			// macchina, dove gira il tunnel: è la configurazione di casa, e va bene
+			// così finché il proxy non si sposta altrove.
+			ProxyFidati: elenco("PERCORSI_PROXY_FIDATI"),
+			Log:         registro,
 		},
 	)
 
@@ -77,6 +82,22 @@ func ambiente(chiave, valorePredefinito string) string {
 		return v
 	}
 	return valorePredefinito
+}
+
+// elenco legge una lista separata da virgole. Vuoto resta vuoto: chi la consuma
+// sa quale sia il suo default, e non è compito di qui indovinarlo.
+func elenco(chiave string) []string {
+	grezzo := strings.TrimSpace(os.Getenv(chiave))
+	if grezzo == "" {
+		return nil
+	}
+	var voci []string
+	for _, v := range strings.Split(grezzo, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			voci = append(voci, v)
+		}
+	}
+	return voci
 }
 
 func intero(chiave string, valorePredefinito int) int {

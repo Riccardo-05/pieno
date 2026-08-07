@@ -13,6 +13,80 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 
 ---
 
+## Y · Revisione del codice dell'8 agosto 2026
+
+Trovati leggendo il codice riga per riga, ciascuno riprodotto con un test scritto
+**prima** della correzione. Tutti chiusi.
+
+- [x] 🔴 **Y1 — Una risposta 200 che non è JSON cancellava il dato buono.**
+  `caricaProvincia` salvava il corpo *prima* di provare a leggerlo, e il ripiego sulla
+  cache stava fuori dal `try`. Il captive portal di un Wi-Fi pubblico — che risponde 200
+  con la sua pagina di login — sovrascriveva il file del giorno prima e poi faceva
+  esplodere un `FormatException` all'avvio: l'opposto esatto della promessa del README.
+  Ora si salva **solo ciò che si è riusciti a leggere**, e una cache illeggibile viene
+  buttata invece di riproporre lo stesso errore ogni volta. Test in `repository_test.dart`.
+- [x] 🟠 **Y2 — Il parser orari dichiarava chiusi gli impianti aperti.** `_giorniDi`
+  cercava i giorni solo davanti a una cifra, quindi `Su off` restava senza giorni — e una
+  regola senza giorni vale per tutti: l'unica regola di chiusura svuotava la settimana
+  intera. `Mo-Sa 07:00-20:00; Su off` è fra le forme più comuni in OSM, e il lunedì
+  mattina l'app scriveva «Chiuso ora». Test in `orari_test.dart`.
+- [x] 🔴 **Y3 — La classifica usava il righello, la scheda la strada.** `ordina`
+  calcolava sempre l'Haversine anche quando il servizio percorsi aveva risposto: il primo
+  della lista poteva essere il secondo per strada. Chiude il difetto vero di E2. Il ciclo
+  di dipendenze (le distanze si chiedono per l'elenco, l'elenco dipende dalle distanze) è
+  spezzato da `insiemeFiltratoProvider`: decide *di chi* parlare, l'elenco *in che
+  ordine*. Test in `classifica_test.dart`.
+- [x] 🟠 **Y4 — Il costo della deviazione si misurava su una base incompleta.** Il
+  riferimento «più vicino» usciva dai soli impianti con distanza reale: se il servizio
+  taceva proprio sul più vicino, il riferimento si allontanava e **tutte** le deviazioni
+  si accorciavano — cioè il risparmio mostrato diventava più roseo del vero. Ora il
+  riferimento è il più vicino di tutti (anche se stimato), mentre l'addebito resta ai
+  soli misurati. Estratta in `costiDiDeviazione`, il che chiude anche metà di A4.
+- [x] 🟠 **Y5 — Il limite di frequenza del servizio percorsi era aggirabile.**
+  `CF-Connecting-IP` veniva creduta sempre: bastava cambiarla a ogni richiesta per avere
+  un secchio nuovo ogni volta, e per far crescere la mappa dei secchi più in fretta di
+  quanto `Pulisci` la sfoltisse. Ora vale solo se la richiesta arriva da una rete fidata
+  (default: la macchina locale, dove gira il tunnel; `PERCORSI_PROXY_FIDATI` per gli
+  altri casi).
+- [x] 🟠 **Y6 — La deduplica era quadratica: 104 s su 21.000 impianti.** `candidati[i+1:]`
+  copiava la lista a ogni giro e il marchio si normalizzava a ogni confronto, duecento
+  milioni di volte. Ora gli impianti entrano in celle di lato pari alla soglia e si
+  confrontano solo le nove celle attorno: stesso risultato, e nel test di scala si passa
+  da 204 s a meno di un secondo.
+- [x] 🟠 **Y7 — R4 diceva «quarantena fino alla conferma del giorno dopo», il codice
+  cancellava e basta.** Siccome lo storico si ricostruiva dai file pubblicati, il valore
+  nuovo non ci finiva mai: il giorno dopo il confronto ripartiva dal vecchio e un rialzo
+  di mercato vero restava invisibile **finché il salto non rientrava da sé**. Ora i
+  prezzi in quarantena si conservano (`prezzi_in_quarantena`) e finiscono in
+  `storico.json`, che è ciò con cui domani ci si confronta: la conferma può arrivare.
+- [x] 🟡 **Y8 — `pubblica_atomica` non era atomica.** Fra i due spostamenti c'era un
+  istante senza cartella pubblica; se il secondo falliva restava solo
+  `public_precedente` e il passo successivo del job cercava un percorso sparito. La
+  finestra resta — si rinominano directory — ma ora il giorno prima torna al suo posto.
+- [x] 🟡 **Y9 — Nessun fuso in tutta la catena della freschezza.** `dato_del` era scritta
+  senza offset e il telefono la rileggeva come ora *sua*: giusta per caso in Italia
+  d'inverno, sbagliata di un'ora d'estate e di più all'estero. È lo stesso equivoco che
+  aveva già fatto saltare il job del 6 agosto (I3), allora tamponato con soglie più
+  larghe. Ora la pipeline scrive l'offset di `Europe/Rome`.
+- [x] 🟡 **Y10 — `provinciaPiuVicina` sbagliava provincia sui confini.** Col solo
+  baricentro chi sta alle porte di Monza finisce su Milano, e vede un elenco di impianti
+  tutti lontani senza capire perché. Il manifest porta ora il `riquadro` di ogni
+  provincia: vince chi contiene il punto, il baricentro resta come ripiego.
+- [x] 🟡 **Y11 — Il `Retry-After` del servizio non veniva mai letto.** Un solo 429
+  spegneva le distanze reali per dieci minuti, anche quando il servizio stava dicendo
+  «riprova fra tre secondi». Ora un 429 è distinto da un guasto e si aspetta quanto
+  chiede lui.
+- [x] 🟡 **Y12 — La cache delle distanze non aveva tetto.** Cresceva per tutta la
+  sessione, e l'unica cosa che la svuotava era spostarsi di trecento metri. Tetto a 2000
+  voci, si butta la più vecchia.
+
+Verificato e **non** un difetto, contrariamente a quanto ipotizzato durante la stessa
+revisione: `percorsi.exe` e i `__pycache__` non sono versionati — sono già coperti da
+`.gitignore` e da `percorsi/.gitignore`. L'abbaglio veniva dall'aver guardato il
+filesystem con `find` invece dell'indice con `git ls-files`.
+
+---
+
 ## Z · Aperti dopo la messa in servizio dei percorsi (7 agosto 2026)
 
 Trovati usando l'app su iPhone con le distanze reali, non leggendo il codice.
@@ -116,14 +190,13 @@ sceglieresti comunque sarebbe più fedele al vero, ma cambia la sostanza del cal
   già dichiarava `config.yaml` (`risparmio.confronto: provincia`). L'app la legge da lì
   (`mediaRiferimentoProvider`) e ripiega sulla media dell'elenco solo per i file salvati
   prima che il campo esistesse. Il «risparmi X €» non si muove più col raggio.
-- [~] 🟠 **E2 — Distanza in linea d'aria.** Dichiarata nella scheda («a 4,2 km in linea
-  d'aria»), ma resta il difetto vero: **falsa la classifica**, perché due impianti alla
-  stessa distanza in aria possono essere a 4,5 e 11 km di strada. Si chiude con le distanze
-  reali — piano in `linee-guida/10-percorsi-e-backend.md`.
-- [~] 🟠 **E3 — «al netto della deviazione» non implementato.** Il risparmio è lordo
-  (`deviazioneEuro` = 0), quindi un impianto lontano può risultare conveniente anche quando
-  raggiungerlo costa più di ciò che fa risparmiare. Si chiude nella Fase 6 dello stesso
-  piano, sui chilometri veri. Alzato a media: non è una rifinitura, è un numero falso.
+- [x] 🟠 **E2 — Distanza in linea d'aria.** Il difetto vero era che **falsava la
+  classifica**: due impianti alla stessa distanza in aria possono essere a 4,5 e 11 km di
+  strada. Chiuso da Y3 — l'elenco si ordina con i chilometri migliori disponibili per
+  ciascun impianto, gli stessi che la scheda mostra.
+- [x] 🟠 **E3 — «al netto della deviazione».** Implementato sui chilometri veri, con il
+  riferimento corretto (Y4): il risparmio mostrato è netto, e dove la deviazione se lo
+  mangia la pastiglia sparisce — che è il punto, non un difetto.
 - [ ] 🟡 **E4 — Orari OSM a copertura parziale** (dichiarato). Nessuna azione.
 
 ## F · Accessibilità
@@ -158,10 +231,11 @@ sceglieresti comunque sarebbe più fedele al vero, ma cambia la sostanza del cal
 
 ## H · Test
 
-- [ ] 🟠 **H1 — Copertura bassa.** 20 test: risparmio, ordinamento, modello, geojson,
-  presa del foglio, uno smoke widget. Mancano `filtra`, `domain/orari.dart` (il parser
-  `opening_hours` ha molti rami), `manifest.provinciaPiuVicina`, e uno smoke di
-  mappa/impostazioni.
+- [~] 🟠 **H1 — Copertura bassa.** Da 20 a **70 test** nell'app (più 40 nella pipeline):
+  aggiunti `domain/orari.dart`, `manifest.provinciaPiuVicina`, il ripiego del repository,
+  l'ordinamento con le distanze reali e il costo della deviazione sull'elenco — cioè
+  esattamente i punti dove stavano i difetti Y1–Y4 e Y10. Restano fuori `filtra` e uno
+  smoke di mappa/impostazioni.
 - [ ] 🟡 **H2 — `test_validation.py` time-dipendente.** `OGGI` è ancorato a
   `datetime.now()`: resta sensibile all'orologio.
 

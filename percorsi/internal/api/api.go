@@ -33,7 +33,12 @@ type Config struct {
 	RafficaClient     int
 	RichiesteAlMinuto float64
 	FileVersione      string
-	Log               *slog.Logger
+
+	// Reti (in forma CIDR) da cui si accetta l'intestazione «CF-Connecting-IP».
+	// Vuoto significa la sola macchina locale, dove gira il tunnel.
+	ProxyFidati []string
+
+	Log *slog.Logger
 }
 
 // Servizio tiene insieme motore, cache e limite, e serve le tre rotte.
@@ -45,6 +50,10 @@ type Servizio struct {
 	cfg      Config
 	avvio    time.Time
 	sale     []byte // rende non ricostruibile l'IP tenuto in memoria
+
+	// Chi può parlare a nome di altri: si crede all'intestazione del tunnel solo
+	// se la richiesta arriva da qui.
+	proxyFidati []*net.IPNet
 }
 
 // Nuovo costruisce il servizio. I campi a zero prendono il default.
@@ -72,13 +81,14 @@ func Nuovo(m motore.Motore, cfg Config) *Servizio {
 	_, _ = rand.Read(sale)
 
 	return &Servizio{
-		motore:   m,
-		tratte:   cache.Nuova[motore.Tratta](cfg.VociCache, cfg.DurataCache),
-		percorsi: cache.Nuova[motore.Percorso](cfg.VociCache/10+1, cfg.DurataCache),
-		limite:   limite.Nuovo(cfg.RafficaClient, cfg.RichiesteAlMinuto),
-		cfg:      cfg,
-		avvio:    time.Now(),
-		sale:     sale,
+		motore:      m,
+		tratte:      cache.Nuova[motore.Tratta](cfg.VociCache, cfg.DurataCache),
+		percorsi:    cache.Nuova[motore.Percorso](cfg.VociCache/10+1, cfg.DurataCache),
+		limite:      limite.Nuovo(cfg.RafficaClient, cfg.RichiesteAlMinuto),
+		cfg:         cfg,
+		avvio:       time.Now(),
+		sale:        sale,
+		proxyFidati: retiFidate(cfg.ProxyFidati, cfg.Log),
 	}
 }
 
@@ -306,17 +316,60 @@ func (s *Servizio) conLimite(prossimo http.Handler) http.Handler {
 // impronta identifica il client per il solo limite di frequenza. L'IP non
 // viene conservato: se ne tiene un'impronta con sale casuale, che muore con il
 // processo e non è riconducibile a nessuno.
+// L'intestazione del tunnel vale **solo se arriva dal tunnel**. Crederle sempre
+// significa non avere un limite: chi parla direttamente col servizio scrive
+// l'indirizzo che vuole, ne cambia uno a ogni richiesta e ha un secchio nuovo
+// ogni volta — e per giunta fa crescere la mappa dei secchi più in fretta di
+// quanto Pulisci riesca a sfoltirla.
 func (s *Servizio) impronta(r *http.Request) string {
-	indirizzo := r.Header.Get("CF-Connecting-IP") // dietro il tunnel
-	if indirizzo == "" {
-		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-			indirizzo = host
-		} else {
-			indirizzo = r.RemoteAddr
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+
+	indirizzo := host
+	if s.daFidarsi(host) {
+		if dichiarato := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); dichiarato != "" {
+			indirizzo = dichiarato
 		}
 	}
+
 	somma := sha256.Sum256(append(append([]byte(nil), s.sale...), indirizzo...))
 	return hex.EncodeToString(somma[:8])
+}
+
+// daFidarsi dice se chi ci sta parlando è il nostro proxy, e quindi se ciò che
+// dichiara sul conto di altri va creduto.
+func (s *Servizio) daFidarsi(host string) bool {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, rete := range s.proxyFidati {
+		if rete.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// retiFidate legge le reti indicate in configurazione. Il default è la macchina
+// stessa: cloudflared gira qui accanto, e nessun altro deve poter parlare a nome
+// di terzi. Una voce illeggibile viene scartata e detta, non ignorata in silenzio.
+func retiFidate(voci []string, log *slog.Logger) []*net.IPNet {
+	if len(voci) == 0 {
+		voci = []string{"127.0.0.0/8", "::1/128"}
+	}
+	reti := make([]*net.IPNet, 0, len(voci))
+	for _, voce := range voci {
+		_, rete, err := net.ParseCIDR(strings.TrimSpace(voce))
+		if err != nil {
+			log.Warn("proxy fidato non riconosciuto: voce ignorata", "voce", voce)
+			continue
+		}
+		reti = append(reti, rete)
+	}
+	return reti
 }
 
 // conRegistro registra conteggi e tempi. Mai la query, mai il corpo: è lì che
