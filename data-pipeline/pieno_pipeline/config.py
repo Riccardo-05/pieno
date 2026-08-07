@@ -43,6 +43,7 @@ class Risparmio:
 @dataclass(frozen=True)
 class Qualita:
     freschezza_target_pct: float
+    eta_massima_file_ore: float
     scarto_mediano_target_eur_litro: float
     segnalazioni_target_permille: float
     impianti_senza_eta_ammessi: int
@@ -104,6 +105,7 @@ def carica(percorso: os.PathLike | str | None = None) -> Config:
         ),
         qualita=Qualita(
             freschezza_target_pct=float(q["freschezza_target_pct"]),
+            eta_massima_file_ore=float(q.get("eta_massima_file_ore", 48)),
             scarto_mediano_target_eur_litro=float(q["scarto_mediano_target_eur_litro"]),
             segnalazioni_target_permille=float(q["segnalazioni_target_permille"]),
             impianti_senza_eta_ammessi=int(q["impianti_senza_eta_ammessi"]),

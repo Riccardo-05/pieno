@@ -14,12 +14,27 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from .model import Impianto, Prezzo, normalizza_carburante
 
-FORMATI_DATA = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y")
+# La riga "Estrazione del ..." è stata osservata in due forme — con i due punti e la data
+# all'italiana, e senza due punti con la data ISO — quindi si accettano entrambe.
+FORMATI_DATA = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d")
+
+# Carburanti per cui si tiene SOLO il prezzo self.
+#
+# Per benzina e gasolio il servito è lo stesso prodotto con un sovrapprezzo: confrontarlo
+# con i prezzi self falserebbe la classifica, e il self esiste quasi ovunque (il 95,6%
+# degli impianti ce l'ha), quindi scartarlo costa poco.
+#
+# GPL e metano NO: in Italia si erogano quasi sempre con l'addetto, e `isSelf=0` lì non
+# segnala un sovrapprezzo — è l'unico modo in cui quel prodotto viene venduto. Sul dato
+# reale il self copre 167 impianti GPL su 4.598 e 102 su 1.513 per il metano: applicare
+# anche a loro il filtro cancella il 96% del GPL e il 93% del metano dall'app.
+CARBURANTI_SOLO_SELF = frozenset({"benzina", "gasolio"})
 
 
 def _decodifica(dati: bytes, codifica_attesa: str) -> str:
@@ -41,13 +56,25 @@ def _righe_utili(testo: str) -> List[str]:
 
 
 def data_estrazione(dati: bytes, codifica_attesa: str = "utf-8") -> Optional[datetime]:
-    """Legge la data di estrazione dalla prima riga del CSV MIMIT."""
+    """Legge la data di estrazione dalla prima riga del CSV MIMIT.
+
+    Sono state osservate due forme della stessa riga:
+
+        Estrazione del : 05/08/2026 08:00:00
+        Estrazione del 2026-08-05
+
+    Cercare i due punti — come si faceva prima — funziona solo sulla prima: sulla seconda
+    la funzione restituiva None e la pipeline ripiegava su `datetime.now()`, dichiarando
+    come "data del dato" l'ora del job. Da lì la misura di freschezza confrontava l'ora
+    del job con sé stessa e passava sempre, e l'app scriveva "aggiornato oggi" su un file
+    di due giorni prima. Qui si toglie l'etichetta e si prova a leggere ciò che resta.
+    """
     testo = _decodifica(dati, codifica_attesa)
     prima = testo.splitlines()[0] if testo else ""
-    if ":" in prima:
-        coda = prima.split(":", 1)[1].strip()
-        return _parse_data(coda)
-    return None
+    if not prima.strip().lower().startswith("estrazione"):
+        return None
+    coda = re.sub(r"^\s*estrazione\s+del\s*:?\s*", "", prima, flags=re.IGNORECASE).strip()
+    return _parse_data(coda)
 
 
 def _parse_data(grezzo: str) -> Optional[datetime]:
@@ -116,8 +143,10 @@ def applica_prezzi(impianti: Dict[str, Impianto], dati: bytes,
                    codifica_attesa: str = "utf-8", separatore_atteso: str = ";") -> int:
     """Aggiunge i prezzi agli impianti. Ritorna il numero di righe prezzo applicate.
 
-    Se per uno stesso impianto+carburante arrivano più righe (self/servito), tiene
-    il prezzo self quando disponibile (è quello mostrato all'utente).
+    Regola self/servito (vedi CARBURANTI_SOLO_SELF): per benzina e gasolio si tiene solo
+    il self e le righe servito si scartano; per GPL e metano si accetta anche il servito,
+    perché è quasi sempre l'unica forma in cui vengono venduti. Se per lo stesso
+    impianto+carburante arrivano entrambe, vince il self; a parità, la più recente.
     """
     testo = _decodifica(dati, codifica_attesa)
     applicati = 0
@@ -133,22 +162,26 @@ def applica_prezzi(impianti: Dict[str, Impianto], dati: bytes,
         if valore is None:
             continue
         is_self = _get(riga, "isSelf") in ("1", "true", "True", "SI", "Si")
-        # SOLO self: i prezzi mostrati devono essere puliti, senza il sovrapprezzo del
-        # servito. Le righe "servito" vengono ignorate del tutto.
-        if not is_self:
+        if not is_self and chiave in CARBURANTI_SOLO_SELF:
             continue
         nuovo = Prezzo(
             carburante=chiave,
             valore=round(valore, 3),
-            self_service=True,
+            self_service=is_self,
             comunicato_il=_parse_data(_get(riga, "dtComu")),
         )
         vecchio = imp.prezzi.get(chiave)
-        # A parità di carburante tiene la comunicazione più recente.
-        if vecchio is None or _piu_recente(nuovo, vecchio):
+        if vecchio is None or _preferito(nuovo, vecchio):
             imp.prezzi[chiave] = nuovo
         applicati += 1
     return applicati
+
+
+def _preferito(nuovo: Prezzo, vecchio: Prezzo) -> bool:
+    """Il self batte sempre il servito; a parità di modalità, la comunicazione più recente."""
+    if nuovo.self_service != vecchio.self_service:
+        return nuovo.self_service
+    return _piu_recente(nuovo, vecchio)
 
 
 def _piu_recente(nuovo: Prezzo, vecchio: Prezzo) -> bool:

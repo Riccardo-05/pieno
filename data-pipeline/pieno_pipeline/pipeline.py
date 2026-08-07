@@ -35,11 +35,21 @@ def esegui(args: argparse.Namespace) -> int:
     raw_pre = sources.ottieni(s_pre, args.prezzi)
 
     # --- analisi -------------------------------------------------------------------
-    data_dato = (
-        parsing.data_estrazione(raw_pre, s_pre.codifica_attesa)
-        or parsing.data_estrazione(raw_ana, s_ana.codifica_attesa)
-        or datetime.now(timezone.utc).replace(tzinfo=None)
+    # Data del dato: quella dichiarata dal CSV. Il ripiego sull'ora del job non è neutro —
+    # rende la misura di freschezza un confronto dell'orologio con sé stesso, che passa
+    # sempre — quindi va dichiarato, non subìto in silenzio.
+    data_dato = parsing.data_estrazione(raw_pre, s_pre.codifica_attesa) or parsing.data_estrazione(
+        raw_ana, s_ana.codifica_attesa
     )
+    data_letta = data_dato is not None
+    if not data_letta:
+        data_dato = datetime.now(timezone.utc).replace(tzinfo=None)
+        print(
+            "Attenzione: data di estrazione non leggibile dalla prima riga dei CSV. "
+            "Si ripiega sull'ora del job: la misura di freschezza NON è attendibile "
+            "(vedi 'data_dato_letta' nel report).",
+            file=sys.stderr,
+        )
     impianti = parsing.leggi_anagrafica(raw_ana, s_ana.codifica_attesa, s_ana.separatore_atteso)
     n_prezzi = parsing.applica_prezzi(impianti, raw_pre, s_pre.codifica_attesa, s_pre.separatore_atteso)
     print(f"Letti {len(impianti)} impianti, {n_prezzi} righe prezzo. Dato del {data_dato:%d/%m/%Y}.")
@@ -68,13 +78,15 @@ def esegui(args: argparse.Namespace) -> int:
 
     # --- report --------------------------------------------------------------------
     ver = build.versione(data_dato)
-    rep = report.genera(impianti.values(), conteggi, cfg, data_dato, ver, storico=storico)
+    rep = report.genera(impianti.values(), conteggi, cfg, data_dato, ver, storico=storico,
+                        data_letta=data_letta)
     print(f"Mostrati {rep['mostrati']} · scartati {rep['scartati']} · quarantena {rep['in_quarantena']}")
     if not rep["misure_di_controllo"]["storico_disponibile"]:
         print("Attenzione: nessuna build precedente trovata → la regola R4 (salto in 24 h) "
               "non è stata applicata.", file=sys.stderr)
-    print(f"Freschezza 24h: {rep['misure_di_controllo']['freschezza_pct_24h']}% "
-          f"(target {cfg.qualita.freschezza_target_pct}%) → esito {rep['esito_pubblicazione']}")
+    m = rep["misure_di_controllo"]
+    print(f"Età del file: {m['eta_file_ore']} h (limite {m['eta_massima_file_ore']:.0f} h) "
+          f"→ esito {rep['esito_pubblicazione']}")
 
     # --- pubblicazione atomica (solo se il report supera le soglie) ----------------
     if rep["esito_pubblicazione"] != "ok" and not args.forza:

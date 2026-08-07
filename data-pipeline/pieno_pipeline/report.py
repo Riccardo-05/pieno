@@ -33,16 +33,20 @@ def _adesso_italia() -> datetime:
 
 def genera(impianti: Iterable[Impianto], conteggi: Dict[str, int], cfg: Config,
            data_riferimento: datetime, ver: str,
-           storico: Optional[Dict[str, Dict[str, float]]] = None) -> dict:
+           storico: Optional[Dict[str, Dict[str, float]]] = None,
+           data_letta: bool = True) -> dict:
     lista = list(impianti)
     validi = [i for i in lista if i.valido and i.prezzi]
 
     # Freschezza del DATASET: età del file ministeriale servito (la "data del dato").
     # Tutti gli impianti mostrati provengono dallo stesso file, quindi la loro "età del
-    # dato" è l'età del file. Il PDF (pag. 12): ">85% impianti mostrati con dato non più
-    # vecchio di 24 ore" -> qui = il file servito è più recente di 24 ore.
+    # dato" è l'età del file. Il PDF (pag. 12) chiede 24 ore; la soglia effettiva è in
+    # config (`eta_massima_file_ore`, 48) perché il file ministeriale nasce già vecchio di
+    # un giorno e la sua intestazione non porta l'ora — la motivazione, con le misure, sta
+    # in config.yaml e in linee-guida/05-dati-e-qualita.md.
+    limite_ore = cfg.qualita.eta_massima_file_ore
     eta_file_ore = max(0.0, (_adesso_italia() - data_riferimento).total_seconds() / 3600.0)
-    dataset_fresco = eta_file_ore < 24.0
+    dataset_fresco = eta_file_ore < limite_ore
     freschezza_pct = 100.0 if dataset_fresco else 0.0
     # Ogni impianto mostrato ha un'età (quella del file): 0 senza età se il file è datato.
     senza_eta = 0 if data_riferimento is not None else len(validi)
@@ -54,7 +58,11 @@ def genera(impianti: Iterable[Impianto], conteggi: Dict[str, int], cfg: Config,
         return round(100.0 * n / len(validi), 1) if validi else 0.0
 
     misure = {
+        # False = la data del dato è l'ora del job, non quella dichiarata dal CSV: la
+        # freschezza qui sotto confronta l'orologio con sé stesso e passa sempre.
+        "data_dato_letta": data_letta,
         "eta_file_ore": round(eta_file_ore, 1),
+        "eta_massima_file_ore": limite_ore,
         "freschezza_pct_24h": round(freschezza_pct, 2),
         "freschezza_target_pct": cfg.qualita.freschezza_target_pct,
         "freschezza_ok": dataset_fresco,
@@ -114,8 +122,9 @@ def _markdown(r: dict) -> str:
         "",
         "## Misure di controllo",
         "",
+        f"- Data del dato letta dal CSV: {'sì' if m['data_dato_letta'] else '**NO — è l’ora del job, freschezza non attendibile**'}",
         f"- Età del file servito: {m['eta_file_ore']} ore",
-        f"- Freschezza del dataset < 24 h → {'OK' if m['freschezza_ok'] else 'SOTTO SOGLIA'}",
+        f"- Freschezza del dataset < {m['eta_massima_file_ore']:.0f} h → {'OK' if m['freschezza_ok'] else 'SOTTO SOGLIA'}",
         f"- Impianti senza età del dato: {m['impianti_senza_eta']} (ammessi {m['impianti_senza_eta_ammessi']}) → {'OK' if m['senza_eta_ok'] else 'SOTTO SOGLIA'}",
         f"- Scarto mediano prezzo mostrato/reale: {m['scarto_mediano_eur_litro']}",
         f"- Segnalazioni ogni 1.000 navigazioni: {m['segnalazioni_permille']}",

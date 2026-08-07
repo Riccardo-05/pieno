@@ -4,7 +4,12 @@ name: Dati — job notturno
 
 on:
   schedule:
-    - cron: "20 6 * * *"   # ~08:20 ora italiana; il dato MIMIT è "in vigore alle 8:00"
+    # 08:00 UTC = 10:00 ora italiana. NON prima: il Ministero riscrive il CSV verso le
+    # 06:45 UTC (misurato sul suo Last-Modified), e un job che parte alle 06:20 può
+    # trovare ancora il file del giorno precedente — con il contenuto già vecchio di due
+    # giorni, quindi oltre la soglia di età, quindi build bloccata e dati fermi.
+    # Finora ha funzionato solo grazie al ritardo con cui GitHub esegue i cron (~09:10).
+    - cron: "0 8 * * *"
   workflow_dispatch: {}      # esecuzione manuale on-demand
 
 permissions:

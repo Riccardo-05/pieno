@@ -76,13 +76,13 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 
 ## E · Onestà sul dato
 
-- [ ] 🔴 **E5 — La data del dato non viene letta dal CSV.** Nel manifest pubblicato
-  `dato_del` è `2026-08-05T09:12:35.186809`: ha i microsecondi ed è a due minuti da
-  `generato_il`, cioè è il fallback `datetime.now()` di `pipeline.py`, non la riga
-  «Estrazione del :». Conseguenze: la misura di freschezza confronta l'ora del job con sé
-  stessa e **passa sempre**, e la regola R5 (età massima) usa la data sbagliata come
-  riferimento. È un guasto silenzioso, la categoria che il progetto si è dato la regola di
-  evitare.
+- [x] 🔴 **E5 — La data del dato non veniva letta dal CSV.** L'intestazione era cercata
+  per i due punti (`Estrazione del : ...`), forma che il file ha smesso di avere: quella
+  reale è `Estrazione del 2026-08-05`. La pipeline ripiegava su `datetime.now()`, quindi
+  la freschezza confrontava l'orologio con sé stesso e l'app scriveva «aggiornato oggi»
+  su dati di due giorni prima. Ora entrambe le forme sono accettate, il ripiego è
+  dichiarato (`data_dato_letta` + avviso su stderr) e la soglia di età è tarata a 48 h
+  sulle misure della fonte. Test in `tests/test_parsing.py`.
 - [ ] 🟠 **E1 — «Media di zona» instabile.** Il risparmio (e il colore rame) si calcolano
   sulla media dell'elenco **filtrato** per raggio ed età, non su una media provinciale
   stabile: cambiando il raggio cambia il «risparmi X €» e quali chip diventano rame.
@@ -122,9 +122,11 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 - [ ] 🟠 **I1 — Overpass in CI può andare in timeout.** `orari.py` interroga tutta Italia
   sull'istanza pubblica: best-effort già gestito (skip su errore), ma la copertura dipende
   dal mirror. Valutare mirror alternativo + un retry.
-- [ ] 🟠 **I3 — Il job notturno non pubblica da giorni.** Al 7 agosto 2026 il manifest
-  pubblico è fermo alla versione `20260805-091452`. Da verificare nelle Actions: potrebbe
-  essere il blocco del report di qualità, un timeout Overpass o il deploy su Pages.
+- [x] 🟠 **I3 — Il job notturno saltato il 6 agosto 2026.** Falliva al passo «Test del
+  validatore», per il test dipendente dall'orologio (H2): il runner gira in UTC e la
+  freschezza si misura in ora italiana. Corretto nel frattempo; l'orario del cron è stato
+  spostato a **08:00 UTC** perché alle 06:20 il Ministero non ha ancora riscritto il CSV
+  (lo fa verso le 06:45) e il job rischiava di lavorare sul file del giorno prima.
 - [ ] 🟡 **I2 — «da definire» dichiarati.** `report.py` (scarto mediano, segnalazioni),
   R1 (confini comunali ISTAT), R7 (settima regola): noti e documentati.
 
@@ -156,8 +158,10 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
   ricorrenti (divisori `0x14000000`, overlay selezione, bordi `0x22000000`) vanno nei token.
 - [ ] 🟡 **K7 — Stringhe UI sparse.** «Portami qui», «€/l», «sul pieno», messaggi di stato:
   sparse nei widget. Un file di stringhe faciliterebbe coerenza e localizzazione.
-- [ ] 🟡 **K8 — Dato morto `selfService`.** Sempre `true` da quando i prezzi sono solo self:
-  rimuovere da pipeline (`s`) e app (`Prezzo.selfService`) se non servirà.
+- [x] 🟡 **K8 — `selfService` non è più dato morto.** Da quando GPL e metano tengono anche
+  il prezzo servito, il campo `s` distingue davvero le due modalità: `true` sempre per
+  benzina e gasolio, quasi sempre `false` per GPL e metano. L'app però non lo mostra
+  ancora — valutare se dirlo nella scheda, visto che per il GPL il prezzo è servito.
 - [ ] 🟡 **K6 — `_SceltaChip` con un solo uso** (impostazioni, «escludi età»).
 - [ ] 🟡 **K10 — API deprecate in vista di Riverpod 3.** 13 usi di `listenSelf` in
   `app_state.dart` (da portare su `Notifier.listenSelf`) e un `activeColor` in
@@ -190,13 +194,12 @@ oltre i 16 ms (8 ms a 120 Hz). In debug, `P` attiva l'overlay prestazioni.
 
 ## Priorità suggerite
 
-1. **E5** — la data del dato non viene letta: falsa la misura di freschezza e la regola R5.
-2. **I3** — capire perché il job notturno non pubblica da due giorni.
-3. **B9** — marcatore migliore e scheda che indicano impianti diversi: è una bugia visibile.
-4. **E1 / E2** — media di zona stabile ed etichetta «in linea d'aria».
-5. **F1** — accessibilità dei prezzi: è anche una voce della checklist di rilascio.
-6. **G4** — i 4 s di avvio contro l'obiettivo di 1 s.
-7. **A4 / J4** — logica in `domain/`, foglio base condiviso.
-8. **B3 / B5** — verifiche runtime sul foglio e sul ricentraggio.
+1. **B9** — marcatore migliore e scheda che indicano impianti diversi: è una bugia visibile.
+2. **E1 / E2** — media di zona stabile ed etichetta «in linea d'aria».
+3. **F1** — accessibilità dei prezzi: è anche una voce della checklist di rilascio.
+4. **G4** — i 4 s di avvio contro l'obiettivo di 1 s.
+5. **H2** — test dipendenti dall'orologio: hanno già fatto saltare una pubblicazione.
+6. **A4 / J4** — logica in `domain/`, foglio base condiviso.
+7. **B3 / B5** — verifiche runtime sul foglio e sul ricentraggio.
 
-**Quick win a basso rischio:** L6 (`const`), A2 (import), J8 (record), K8 (dato morto).
+**Quick win a basso rischio:** L6 (`const`), A2 (import), J8 (record).

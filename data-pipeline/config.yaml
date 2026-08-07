@@ -53,6 +53,15 @@ risparmio:
 # Indicatori di qualità — misure di controllo di pag. 12.
 qualita:
   freschezza_target_pct: 85            # > 85% impianti con dato non più vecchio di 24 h
+  # Età massima del file ministeriale perché la build si possa pubblicare.
+  # Il PDF dice 24 h, ma sul dato reale sono irraggiungibili per due motivi misurati:
+  #   1. il Ministero pubblica ogni mattina (~06:45 UTC) un file il cui CONTENUTO è del
+  #      giorno prima: alla partenza del job è già vecchio di oltre 24 h;
+  #   2. l'intestazione «Estrazione del AAAA-MM-GG» non porta l'ora, quindi la data vale
+  #      mezzanotte e l'età apparente cresce di altre 24 h al massimo.
+  # Caso peggiore osservato ~35 h. A 48 h la soglia tollera il ritardo strutturale e
+  # continua a scattare se il Ministero salta davvero una pubblicazione.
+  eta_massima_file_ore: 48
   scarto_mediano_target_eur_litro: 0.01  # < 0,01 €/l (misurabile solo con audit sul campo)
   segnalazioni_target_permille: 5      # < 5‰ ogni 1.000 navigazioni (misurabile solo in produzione)
   impianti_senza_eta_ammessi: 0        # 0 impianti mostrati senza età del dato
