@@ -58,6 +58,12 @@ class Impianto:
     lon: Optional[float]
     prezzi: Dict[str, Prezzo] = field(default_factory=dict)
 
+    # Prezzi tolti dalla vista dalla validazione ma **non buttati**: R4 dice
+    # «quarantena fino alla conferma del giorno dopo», e senza conservarli la conferma
+    # non potrebbe mai arrivare. Non finiscono nei file di provincia — non si mostrano —
+    # ma finiscono nello storico, che è ciò con cui domani ci si confronta.
+    prezzi_in_quarantena: Dict[str, Prezzo] = field(default_factory=dict)
+
     # Orari di apertura (formato OpenStreetMap `opening_hours`), quando abbinabili da OSM.
     # Non presenti nei dati MIMIT: arricchimento parziale e best-effort.
     orari: Optional[str] = None

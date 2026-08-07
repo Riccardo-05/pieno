@@ -22,8 +22,32 @@ ATTRIBUZIONE = (
 )
 
 
+def _fuso_italiano():
+    """Il fuso in cui il Ministero scrive le sue date. None se il sistema non ha il
+    database dei fusi (Windows senza `tzdata`): in quel caso si resta come prima."""
+    try:
+        from zoneinfo import ZoneInfo
+
+        return ZoneInfo("Europe/Rome")
+    except Exception:  # noqa: BLE001 - fuso non disponibile
+        return None
+
+
 def _iso(dt) -> str | None:
-    return dt.isoformat() if dt else None
+    """Data in ISO-8601 **con l'offset**.
+
+    Le date dei CSV ministeriali sono ore italiane senza fuso. Scriverle così com'erano
+    voleva dire che il telefono le rileggeva come ora *sua*: l'età del dato tornava
+    giusta per caso in Italia d'inverno, sbagliata di un'ora d'estate e di più per chi
+    è all'estero. Un istante scritto senza fuso non è un istante, è un numero.
+    """
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        fuso = _fuso_italiano()
+        if fuso is not None:
+            dt = dt.replace(tzinfo=fuso)
+    return dt.isoformat()
 
 
 def carica_fattori(percorso) -> Dict[str, float]:
@@ -105,6 +129,28 @@ def _centroide(gruppo: List[Impianto]) -> dict | None:
     return {"lat": round(lat, 6), "lon": round(lon, 6)}
 
 
+def _riquadro(gruppo: List[Impianto]) -> dict | None:
+    """Rettangolo che contiene tutti gli impianti della provincia.
+
+    Serve all'app per non sbagliare provincia a ridosso di un confine. Col solo
+    baricentro chi sta a Monza finisce su Milano — il baricentro milanese è più vicino
+    di quello brianzolo — e si ritrova un elenco di impianti tutti lontani senza
+    capirne il motivo. Il rettangolo non è il confine amministrativo, ma dice una cosa
+    che il baricentro non sa dire: *fin dove arrivano* i nostri impianti.
+    """
+    coord = [(i.lat, i.lon) for i in gruppo if i.lat is not None and i.lon is not None]
+    if not coord:
+        return None
+    lat = [c[0] for c in coord]
+    lon = [c[1] for c in coord]
+    return {
+        "latMin": round(min(lat), 6),
+        "latMax": round(max(lat), 6),
+        "lonMin": round(min(lon), 6),
+        "lonMax": round(max(lon), 6),
+    }
+
+
 def versione(data_dato: datetime | None) -> str:
     """Stringa di versione: data del dato + timestamp di build (UTC)."""
     base = (data_dato or datetime.now(timezone.utc)).strftime("%Y%m%d")
@@ -121,6 +167,8 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
     perché la build notturna non deve dipendere da una macchina di casa.
     """
     fattori = fattori or {}
+    # Si scorre più volte (province e storico): l'iterabile va materializzato una volta.
+    tutti = list(impianti)
     staging = cfg.path("dir_staging")
     prov_dir = staging / "province"
     if staging.exists():
@@ -128,7 +176,7 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
     prov_dir.mkdir(parents=True, exist_ok=True)
 
     per_prov: Dict[str, List[Impianto]] = {}
-    for imp in impianti:
+    for imp in tutti:
         if not imp.valido or not imp.prezzi:
             continue
         per_prov.setdefault(imp.provincia or "??", []).append(imp)
@@ -155,6 +203,7 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
             "sha256": hashlib.sha256(blob).hexdigest(),
             "bytes": len(blob),
             "centro": _centroide(gruppo),
+            "riquadro": _riquadro(gruppo),
         })
 
     manifest = {
@@ -168,20 +217,56 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
     (staging / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+    # Storico per la regola R4: **tutti** i prezzi letti oggi, compresi quelli messi in
+    # quarantena. Ricostruirlo dai file di provincia, come si faceva, lasciava fuori
+    # proprio quelli — cioè quelli che domani vanno confermati — e la conferma non
+    # arrivava mai. Non è un file per l'app: è la memoria che la regola richiede.
+    (staging / "storico.json").write_text(
+        json.dumps(_storico(tutti), ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
     return manifest
 
 
+def _storico(impianti: List[Impianto]) -> dict:
+    """{id: {carburante: prezzo}} con i prezzi mostrati **e** quelli in quarantena."""
+    prezzi: Dict[str, Dict[str, float]] = {}
+    for imp in impianti:
+        voce = {c: round(p.valore, 3) for c, p in imp.prezzi.items()}
+        voce.update({c: round(p.valore, 3) for c, p in imp.prezzi_in_quarantena.items()})
+        if voce:
+            prezzi[imp.id] = voce
+    return {"prezzi": prezzi}
+
+
 def pubblica_atomica(cfg: Config) -> Path:
-    """Scambia staging -> public solo ora (dopo che tutto è stato scritto e validato)."""
+    """Scambia staging -> public solo ora (dopo che tutto è stato scritto e validato).
+
+    Fra i due spostamenti c'è un istante in cui la cartella pubblica non esiste. Non lo
+    si può eliminare rinominando directory, ma non lo si deve nemmeno subire: se il
+    secondo spostamento fallisce (disco pieno, permessi, un file tenuto aperto) il
+    giorno prima torna al suo posto. Senza, restava solo `public_precedente` e il passo
+    successivo del job cercava un percorso sparito — con l'aggravante che il dato buono
+    di ieri c'era ancora, solo sotto un altro nome.
+    """
     staging = cfg.path("dir_staging")
     pubblica = cfg.path("dir_pubblica")
     if not (staging / "manifest.json").exists():
         raise RuntimeError("Staging incompleto: manca manifest.json, pubblicazione annullata.")
+
+    precedente = None
     if pubblica.exists():
         precedente = pubblica.with_name(pubblica.name + "_precedente")
         if precedente.exists():
             shutil.rmtree(precedente)
         pubblica.rename(precedente)  # conserva il giorno prima (offline-first)
+
     pubblica.parent.mkdir(parents=True, exist_ok=True)
-    staging.rename(pubblica)
+    try:
+        staging.rename(pubblica)
+    except OSError:
+        if precedente is not None and not pubblica.exists():
+            precedente.rename(pubblica)
+        raise
     return pubblica

@@ -82,7 +82,7 @@ def valida(
             if med is None or med <= 0:
                 continue
             if abs(prezzo.valore - med) / med > tol:
-                del imp.prezzi[chiave]                    # non mostrato
+                _in_quarantena(imp, chiave)               # non mostrato
                 imp.segna(f"{chiave}: prezzo fuori ±30% dalla mediana (quarantena)", quarantena=True)
                 conteggi["R3"] += 1
 
@@ -98,7 +98,7 @@ def valida(
                 if prec is None:
                     continue
                 if abs(prezzo.valore - prec) > soglia:
-                    del imp.prezzi[chiave]
+                    _in_quarantena(imp, chiave)
                     imp.segna(f"{chiave}: salto > {soglia} €/l in 24 h (quarantena)", quarantena=True)
                     conteggi["R4"] += 1
 
@@ -118,6 +118,20 @@ def valida(
     return conteggi
 
 
+def _in_quarantena(imp: Impianto, chiave: str) -> None:
+    """Toglie un prezzo dalla vista senza buttarlo.
+
+    Cancellarlo — come si faceva — significava che lo storico di domani non l'avrebbe
+    mai contenuto, perché lo storico si ricostruisce dai file pubblicati. Il confronto
+    del giorno dopo ripartiva quindi dal valore vecchio, e un rialzo di mercato vero
+    restava invisibile finché il salto non rientrava da sé: l'opposto della «conferma
+    del giorno dopo» che la regola dichiara.
+    """
+    prezzo = imp.prezzi.pop(chiave, None)
+    if prezzo is not None:
+        imp.prezzi_in_quarantena[chiave] = prezzo
+
+
 def _mediane_nazionali(lista: List[Impianto]) -> Dict[str, float]:
     per_carb: Dict[str, List[float]] = {}
     for imp in lista:
@@ -131,15 +145,50 @@ def _mediane_nazionali(lista: List[Impianto]) -> Dict[str, float]:
 def _deduplica(lista: List[Impianto], distanza_max: float) -> int:
     """Marca come scartati i duplicati (<= distanza_max, stesso marchio normalizzato),
     tenendo l'impianto con più prezzi (a parità, comunicazione più recente).
+
+    Si guardano solo le coppie che *possono* essere vicine. Confrontarle tutte, come si
+    faceva, sono duecento milioni di paragoni su ventimila impianti — un minuto e mezzo
+    del job notturno per un controllo che riguarda una manciata di casi — e il costo
+    cresce col quadrato, quindi peggiora da solo man mano che il Ministero aggiunge
+    impianti. Qui ogni impianto entra in una cella di lato pari alla soglia: due punti
+    più vicini della soglia stanno per forza nella stessa cella o in una delle otto
+    attorno, quindi il risultato è identico e il lavoro diventa proporzionale.
     """
     candidati = [i for i in lista if i.valido and i.lat is not None and i.lon is not None]
+    if not candidati:
+        return 0
+
+    # Il marchio si normalizza una volta per impianto, non una volta per confronto.
+    marchi = [normalizza_marchio(i.marchio) for i in candidati]
+
+    # Lato della cella in gradi. In longitudine si usa il caso più stretto d'Italia
+    # (le latitudini alte, dove un grado vale meno chilometri): così la cella non è mai
+    # più piccola della soglia, ed è questo a garantire che le otto vicine bastino.
+    passo_lat = distanza_max / 111_320.0
+    passo_lon = distanza_max / 70_000.0
+
+    def cella(imp: Impianto):
+        return (int(imp.lat // passo_lat), int(imp.lon // passo_lon))
+
+    griglia: Dict[tuple, List[int]] = {}
+    for k, imp in enumerate(candidati):
+        griglia.setdefault(cella(imp), []).append(k)
+
     rimossi = 0
-    for i in range(len(candidati)):
-        a = candidati[i]
+    for i, a in enumerate(candidati):
         if not a.valido:
             continue
-        for b in candidati[i + 1:]:
-            if not b.valido or normalizza_marchio(a.marchio) != normalizza_marchio(b.marchio):
+        riga, colonna = cella(a)
+        vicini = sorted(
+            k
+            for dr in (-1, 0, 1)
+            for dc in (-1, 0, 1)
+            for k in griglia.get((riga + dr, colonna + dc), ())
+            if k > i
+        )
+        for j in vicini:
+            b = candidati[j]
+            if not b.valido or marchi[i] != marchi[j]:
                 continue
             if distanza_metri((a.lat, a.lon), (b.lat, b.lon)) <= distanza_max:
                 peggiore = _peggiore(a, b)

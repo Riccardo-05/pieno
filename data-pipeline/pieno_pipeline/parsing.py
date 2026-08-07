@@ -103,11 +103,25 @@ def _num(grezzo: str) -> Optional[float]:
 
 
 def _lettore(testo: str, separatore_atteso: str) -> csv.DictReader:
+    """Legge il CSV scegliendo il separatore, e **verificando** la scelta.
+
+    Il Sniffer è un indovino: sui nostri file ci prende, ma è l'unica euristica fra la
+    fonte e tutta la build, e se sbaglia non lo dice — restituisce righe con una colonna
+    sola, cioè zero impianti, cioè una build vuota costruita come se niente fosse. Gli
+    indirizzi italiani sono pieni di virgole («VIA ROMA, 12»), che è proprio il genere di
+    cosa che lo può far scivolare. Qui la sua proposta si accetta solo se l'intestazione,
+    tagliata così, produce più di una colonna; altrimenti vale quello che la
+    configurazione dichiara.
+    """
     righe = _righe_utili(testo)
-    campione = "\n".join(righe[:20])
+    if not righe:
+        return csv.DictReader(io.StringIO(""), delimiter=separatore_atteso)
+
     sep = separatore_atteso
-    try:  # conferma il separatore col Sniffer, senza fidarsi ciecamente
-        sep = csv.Sniffer().sniff(campione, delimiters=";,\t|").delimiter
+    try:
+        proposto = csv.Sniffer().sniff("\n".join(righe[:20]), delimiters=";,\t|").delimiter
+        if len(righe[0].split(proposto)) > 1:
+            sep = proposto
     except csv.Error:
         pass
     return csv.DictReader(io.StringIO("\n".join(righe)), delimiter=sep)

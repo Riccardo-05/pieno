@@ -33,11 +33,32 @@ def ottieni(sorgente: Sorgente, locale: Optional[str | Path], timeout: int = 60)
 
 
 def carica_storico(cfg: Config) -> Dict[str, Dict[str, float]]:
-    """Ricostruisce {id_impianto: {carburante: prezzo}} dai file di provincia pubblicati
-    in precedenza, per la regola R4 (salto in 24 h). Vuoto al primo avvio.
+    """{id_impianto: {carburante: prezzo}} della build precedente, per la regola R4
+    (salto in 24 h). Vuoto al primo avvio.
+
+    Si preferisce `storico.json`, che contiene **anche i prezzi in quarantena**: sono
+    proprio quelli che domani vanno confermati, e ricostruendo lo storico dai soli file
+    di provincia restavano fuori — così la conferma non arrivava mai e un rialzo vero
+    spariva finché non rientrava da sé. I file di provincia restano il ripiego per le
+    build fatte prima che questo file esistesse.
     """
     storico: Dict[str, Dict[str, float]] = {}
-    prov_dir = cfg.path("dir_pubblica") / "province"
+    pubblica = cfg.path("dir_pubblica")
+
+    file_storico = pubblica / "storico.json"
+    if file_storico.exists():
+        try:
+            contenuto = json.loads(file_storico.read_text(encoding="utf-8"))
+            prezzi = contenuto.get("prezzi") or {}
+            return {
+                str(idi): {str(c): float(v) for c, v in voce.items()}
+                for idi, voce in prezzi.items()
+                if isinstance(voce, dict)
+            }
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            pass  # illeggibile: si ricade sui file di provincia
+
+    prov_dir = pubblica / "province"
     if not prov_dir.exists():
         return storico
     for file in prov_dir.glob("*.json"):
