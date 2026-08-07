@@ -133,9 +133,11 @@ class ImpostazioniScreen extends ConsumerWidget {
   }
 
   // 3 — Ricerca: raggio, ordinamento, escludi dati più vecchi di.
+  // «Escludi dati più vecchi di» non c'è più: la soglia la applica già la pipeline
+  // (regola R5, 30 giorni) e i listini abbandonati non arrivano nemmeno all'app. Era una
+  // manopola tecnica su una decisione già presa a monte.
   Widget _gruppoRicerca(WidgetRef ref) {
     final raggio = ref.watch(raggioKmProvider);
-    final eta = ref.watch(etaMassimaGiorniProvider);
     return _Gruppo(
       titolo: 'RICERCA',
       figli: [
@@ -149,15 +151,6 @@ class ImpostazioniScreen extends ConsumerWidget {
         const _Riga(
           titolo: 'Ordinamento',
           trailing: OrdinamentoShortcut(),
-        ),
-        _Riga(
-          titolo: 'Escludi dati più vecchi di',
-          trailing: _SceltaChip<int>(
-            valori: const [2, 7, 30],
-            selezionato: eta,
-            etichetta: (g) => '$g giorni',
-            onScelta: (g) => ref.read(etaMassimaGiorniProvider.notifier).state = g,
-          ),
         ),
       ],
     );
@@ -349,46 +342,6 @@ class _Riga extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SceltaChip<T> extends StatelessWidget {
-  const _SceltaChip({
-    required this.valori,
-    required this.selezionato,
-    required this.etichetta,
-    required this.onScelta,
-  });
-
-  final List<T> valori;
-  final T selezionato;
-  final String Function(T) etichetta;
-  final ValueChanged<T> onScelta;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 6,
-      children: [
-        for (final v in valori)
-          GestureDetector(
-            onTap: () => onScelta(v),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: v == selezionato ? PienoColors.inchiostro : const Color(0x11000000),
-                borderRadius: BorderRadius.circular(PienoRadii.pillola),
-              ),
-              child: Text(
-                etichetta(v),
-                style: PienoText.valoreDettaglio.copyWith(
-                  color: v == selezionato ? Colors.white : PienoColors.inchiostro,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

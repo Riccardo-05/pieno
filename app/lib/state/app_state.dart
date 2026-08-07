@@ -132,13 +132,6 @@ final capacitaLitriProvider = StateProvider<int>((ref) {
   return prefs.getInt('capacita') ?? 50;
 });
 
-/// "Escludi dati più vecchi di" in giorni (Impostazioni → Ricerca).
-final etaMassimaGiorniProvider = StateProvider<int>((ref) {
-  final prefs = ref.watch(prefsProvider);
-  ref.listenSelf((_, next) => prefs.setInt('etaMassima', next));
-  return prefs.getInt('etaMassima') ?? 30;
-});
-
 /// Ordina secondo il criterio scelto. Prezzo: crescente. Distanza: dal più vicino
 /// (serve la posizione). Bilanciato: media delle due grandezze normalizzate 0–1 nella
 /// zona (0 = migliore), così prezzo e distanza pesano allo stesso modo.
@@ -178,23 +171,22 @@ List<Impianto> ordina(List<Impianto> impianti, Carburante c, Ordinamento ord, Po
   return lista;
 }
 
-/// Filtra gli impianti: devono avere il carburante scelto; il dato non più vecchio
-/// della soglia (escludi età); e — se richiesto e c'è la posizione — entro il raggio.
+/// Filtra gli impianti: devono avere il carburante scelto e — se richiesto e c'è la
+/// posizione — stare entro il raggio.
+///
+/// Nessun filtro per età: la soglia sui listini abbandonati la applica la pipeline
+/// (regola R5), quindi qui non arrivano proprio. Rifarla nell'app significava tarare due
+/// volte la stessa decisione, con l'aggravante che la manopola nelle impostazioni poteva
+/// stringere più della fonte e far sparire impianti perfettamente validi.
 List<Impianto> filtra(
   List<Impianto> impianti,
   Carburante c, {
   Posizione? pos,
   double? raggioKm,
-  int? etaMaxGiorni,
 }) {
-  final ora = DateTime.now();
   return impianti.where((i) {
     final p = i.prezzoDi(c);
     if (p == null) return false;
-    if (etaMaxGiorni != null) {
-      final t = p.comunicatoIl;
-      if (t == null || ora.difference(t).inDays > etaMaxGiorni) return false;
-    }
     if (raggioKm != null && pos != null && i.lat != null && i.lon != null) {
       if (distanzaKm(pos.lat, pos.lon, i.lat!, i.lon!) > raggioKm) return false;
     }
@@ -211,8 +203,7 @@ final elencoProvider = Provider<List<Impianto>>((ref) {
   final pos = ref.watch(posizioneProvider).valueOrNull;
   final ord = ref.watch(ordinamentoProvider);
   final raggio = ref.watch(raggioKmProvider);
-  final eta = ref.watch(etaMassimaGiorniProvider);
-  final filtrati = filtra(dati.impianti, c, pos: pos, raggioKm: raggio, etaMaxGiorni: eta);
+  final filtrati = filtra(dati.impianti, c, pos: pos, raggioKm: raggio);
   return ordina(filtrati, c, ord, pos);
 });
 
@@ -233,14 +224,13 @@ final mediaRiferimentoProvider = Provider<double?>((ref) {
   return mediaZona(ref.watch(elencoProvider), c);
 });
 
-/// Marcatori della mappa: filtrati per carburante ed età (attendibilità), ma NON per
-/// raggio — sulla mappa si naviga tutta la provincia. Il raggio vale per l'elenco.
+/// Marcatori della mappa: filtrati per carburante ma NON per raggio — sulla mappa si
+/// naviga tutta la provincia. Il raggio vale per l'elenco.
 final marcatoriProvider = Provider<List<Impianto>>((ref) {
   final dati = ref.watch(datiProvinciaProvider).valueOrNull?.dati;
   if (dati == null) return const [];
   final c = ref.watch(carburanteProvider);
-  final eta = ref.watch(etaMassimaGiorniProvider);
-  return filtra(dati.impianti, c, etaMaxGiorni: eta);
+  return filtra(dati.impianti, c);
 });
 
 /// Le due viste che condividono lo stesso stato (pag. 3). L'avvio è sulla Mappa.

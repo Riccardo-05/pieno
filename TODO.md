@@ -31,9 +31,14 @@ Legenda: `[ ]` da fare · `[~]` in corso · `[x]` fatto · `[?]` serve una tua d
 
 - [x] **M4 · Occhiello «ALTRE STAZIONI»**, e l'elenco ora **esclude** l'impianto della scheda: «altre» dice il vero. È caduto anche lo stato «riga attiva», che non ha più senso.
 
-- [ ] **M5 · Verificare che la scheda segua il criterio di ordinamento.** Cambiando fra
-  prezzo, bilanciato e distanza, la scheda in cima al foglio e il marcatore in menta
-  devono aggiornarsi insieme.
+- [~] **M5 · La scheda segue il criterio di ordinamento** — collegamento verificato nel
+  codice, resta da guardare sul telefono con i dati nuovi. Comportamento atteso: senza
+  selezione, scheda e marcatore in menta si aggiornano insieme al cambio di criterio; con
+  un impianto selezionato la scheda resta su quello (la scelta esplicita vince) e si
+  sposta solo il marcatore.
+
+- [x] **M6 · L'elenco torna sulla scheda quando cambia la selezione.** Chi stava scorrendo
+  «ALTRE STAZIONI» restava a metà lista senza vedere la scheda cambiata.
 
 ## Vicino a te
 
@@ -41,8 +46,10 @@ Legenda: `[ ]` da fare · `[~]` in corso · `[x]` fatto · `[?]` serve una tua d
 
 ## Impostazioni
 
-- [?] **I1 · «Escludi dati più vecchi di».** Due strade: menu a tendina come il selettore
-  carburante, oppure via del tutto. **Serve la tua decisione.**
+- [x] **I1 · «Escludi dati più vecchi di»: rimosso del tutto.** La soglia resta quella
+  della pipeline (R5, 30 giorni): i listini abbandonati non arrivano proprio all'app.
+  Tolti la riga, il provider, il filtro per età in `filtra` e il componente `_SceltaChip`
+  rimasto senza usi. L'informazione tecnica non si mostra; l'età del dato resta visibile.
 
 - [x] **I2 · «Avvisi sul percorso»: capito e tolto.** Doveva segnalare una stazione più conveniente **lungo il percorso** mentre la decisione è ancora aperta (`07-mappa-e-navigazione.md`). Richiede il percorso (Fase 5) e le notifiche (backend): non esistono, e l'interruttore veniva salvato senza che nessuno lo leggesse. Tolto con il suo provider; torna quando la funzione esiste.
 

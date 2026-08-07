@@ -119,6 +119,9 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   // non deve muoversi sotto il dito. Da ogni altra parte — elenco del foglio, chip di
   // «Vicino a te» — l'utente non sta guardando la mappa, e va portato sul punto.
   bool _selezioneDaMarcatore = false;
+  // Controller della lista dentro il foglio: lo fornisce DraggableScrollableSheet al suo
+  // builder, e serve qui per riportare l'elenco sulla scheda quando cambia la selezione.
+  ScrollController? _scrollFoglio;
 
   @override
   void initState() {
@@ -419,6 +422,16 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     ));
   }
 
+  /// Riporta la lista del foglio sulla scheda. Cambiando impianto cambia la scheda in
+  /// cima, ma chi stava scorrendo «ALTRE STAZIONI» non la vedrebbe: resterebbe a metà
+  /// elenco chiedendosi se il tocco abbia fatto qualcosa.
+  void _riportaElencoInCima() {
+    final sc = _scrollFoglio;
+    if (sc == null || !sc.hasClients || sc.offset <= 0) return;
+    sc.animateTo(0,
+        duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+  }
+
   /// Porta il foglio a [meta]. Con [soloSePiuBasso] lo alza se è più in basso, ma non lo
   /// abbassa mai: serve per il tocco su un marcatore, dove il foglio deve comparire senza
   /// però rubare spazio a chi stava già leggendo l'elenco.
@@ -532,6 +545,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     ref.listen(selezionatoProvider, (_, id) {
       _aggiornaSelezione(); // leggero: aggiorna solo la sorgente della selezione
       _mostraSelezionato(id); // porta in vista il punto e sistema l'altezza del foglio
+      if (id != null) _riportaElencoInCima();
     });
     ref.listen(posizioneProvider, (prev, next) {
       // Ignora le transizioni di stato (es. "loading" quando si dà il consenso): reagisci
@@ -682,7 +696,9 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         maxChildSize: _foglioMax,
         snap: true,
         snapSizes: const [_foglioMedio],
-        builder: (context, scrollController) => GestureDetector(
+        builder: (context, scrollController) {
+          _scrollFoglio = scrollController;
+          return GestureDetector(
           // Swipe verso sinistra sul foglio → vai a "Vicino a te" (lo scroll è verticale,
           // quindi il gesto orizzontale non interferisce).
           onHorizontalDragEnd: (d) {
@@ -722,7 +738,8 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
               ],
             ),
           ),
-        ),
+          );
+        },
       ),
     );
   }
