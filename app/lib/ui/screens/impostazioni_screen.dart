@@ -12,6 +12,7 @@ import '../../design/typography.dart';
 import '../../models/navigatore.dart';
 import '../../state/app_state.dart';
 import '../components/carburante_selettore.dart';
+import '../components/dissolvenza.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/sfondo_aurore.dart';
 import '../components/vetro.dart';
@@ -43,7 +44,12 @@ class ImpostazioniScreen extends ConsumerWidget {
               children: [
                 _intestazione(context),
                 Expanded(
-                  child: ListView(
+                  // Sfuma ai due bordi invece di tagliare: in testa i gruppi scivolano
+                  // sotto il titolo, in coda sotto l'indicatore di sistema.
+                  child: Dissolvenza(
+                    alto: 12,
+                    basso: MediaQuery.of(context).padding.bottom + 12,
+                    child: ListView(
                     padding: EdgeInsets.only(
                         bottom: 30 + MediaQuery.of(context).padding.bottom),
                     children: [
@@ -58,6 +64,7 @@ class ImpostazioniScreen extends ConsumerWidget {
                         style: PienoText.valoreDettaglio,
                       ),
                     ],
+                    ),
                   ),
                 ),
               ],

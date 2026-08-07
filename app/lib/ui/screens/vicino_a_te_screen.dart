@@ -17,6 +17,7 @@ import '../../models/impianto.dart';
 import '../../state/app_state.dart';
 import '../components/carburante_selettore.dart';
 import '../components/chip_alternativa.dart';
+import '../components/dissolvenza.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
 import '../../models/navigatore.dart';
@@ -93,40 +94,16 @@ class VicinoATeScreen extends ConsumerWidget {
         Expanded(
           child: elenco.isEmpty
               ? _statoSenzaRisultati(carburante)
-              : _dissolvenzaInCoda(
-                  context,
-                  _elenco(context, ref, elenco, carburante, pos, nav, capacita),
+              // Le schede non vengono tranciate dal bordo dello switch flottante: ci
+              // passano sotto sfumando, nella stessa fascia che la lista gli riserva.
+              : Dissolvenza(
+                  alto: 12,
+                  basso: kSpazioSwitchFlottante +
+                      MediaQuery.of(context).padding.bottom,
+                  child: _elenco(context, ref, elenco, carburante, pos, nav, capacita),
                 ),
         ),
       ],
-    );
-  }
-
-  /// L'ultimo tratto dell'elenco si dissolve, come nel foglio della Mappa: le schede non
-  /// vengono tranciate dal bordo dello switch flottante, ci passano sotto sfumando.
-  ///
-  /// Qui però NON si può stendere un velo del colore di fondo, come fa la Mappa sul suo
-  /// pannello opaco: sotto c'è l'aurora lavanda in basso a sinistra, e un velo pieno la
-  /// spegnerebbe. Si sfuma quindi il **contenuto** verso la trasparenza (`dstIn` su una
-  /// maschera), lasciando intatto lo sfondo con le sue aurore.
-  ///
-  /// L'altezza della sfumatura è la stessa che la lista riserva in coda allo switch: il
-  /// contenuto svanisce esattamente nella fascia in cui lo switch galleggia.
-  Widget _dissolvenzaInCoda(BuildContext context, Widget lista) {
-    final altezza = kSpazioSwitchFlottante + MediaQuery.of(context).padding.bottom;
-    return ShaderMask(
-      shaderCallback: (rect) {
-        final inizio =
-            rect.height <= 0 ? 1.0 : ((rect.height - altezza) / rect.height).clamp(0.0, 1.0);
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: const [Color(0xFF000000), Color(0xFF000000), Color(0x00000000)],
-          stops: [0, inizio, 1],
-        ).createShader(rect);
-      },
-      blendMode: BlendMode.dstIn,
-      child: lista,
     );
   }
 

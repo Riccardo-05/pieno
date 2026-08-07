@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../components/bottone_primario.dart';
+import '../components/dissolvenza.dart';
 import '../components/sfondo_aurore.dart';
 import '../components/switch_pillola.dart';
 import '../components/vetro.dart';
@@ -35,9 +36,19 @@ class _AccessoScreenState extends State<AccessoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SfondoAurore(
+        // bottom: false — con la safe area inferiore attiva la scheda dei campi finisce
+        // sopra l'indicatore di sistema e appare tagliata. Lo spazio torna come padding
+        // dentro lo scorrevole, e l'ultimo tratto sfuma invece di troncarsi.
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(PienoSpacing.margineScheda),
+          bottom: false,
+          child: Dissolvenza(
+            basso: MediaQuery.of(context).padding.bottom + 12,
+            child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+                PienoSpacing.margineScheda,
+                PienoSpacing.margineScheda,
+                PienoSpacing.margineScheda,
+                PienoSpacing.margineScheda + MediaQuery.of(context).padding.bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -71,6 +82,7 @@ class _AccessoScreenState extends State<AccessoScreen> {
                       style: PienoText.voceImpostazione.copyWith(color: PienoColors.mentaScura)),
                 ),
               ],
+            ),
             ),
           ),
         ),

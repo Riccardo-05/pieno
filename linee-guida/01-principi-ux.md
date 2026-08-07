@@ -18,6 +18,12 @@ Prezzo e bottone si leggono a braccio teso in meno di un secondo: servono in aut
 
 Pannelli in vetro semitrasparente su un fondo con due aurore tenui. Raggi ampi, ombre diffuse, nessuna linea dura: la morbidezza è nelle superfici, mai nei numeri.
 
+## Il contenuto arriva al bordo, e ci svanisce
+
+Nessuna schermata taglia il contenuto scorrevole di netto. La safe area **non** accorcia il riquadro che scorre — altrimenti l'ultimo elemento resta mozzato sopra l'indicatore di sistema: lo spazio da evitare si restituisce come margine *dentro* il contenuto, così a riposo l'ultima riga è sempre raggiungibile e nel frattempo si può scorrere fino al bordo fisico dello schermo.
+
+Dove il contenuto passa sotto qualcosa di fisso — lo switch flottante, la maniglia del foglio, il bordo — **sfuma** invece di essere tranciato, per un tratto alto quanto l'ingombro dell'elemento fisso. La sfumatura agisce sul contenuto, non è un velo del colore di fondo: sotto ci sono le due aurore e un velo pieno le spegnerebbe. Un solo componente per tutte le schermate (`ui/components/dissolvenza.dart`).
+
 ## Bersagli grandi
 
 Nessun elemento toccabile sotto i 50 px di altezza. L'azione primaria è alta 66–74 px e occupa tutta la larghezza utile.

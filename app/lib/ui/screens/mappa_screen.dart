@@ -26,6 +26,7 @@ import '../../models/impianto.dart';
 import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
 import '../components/carburante_selettore.dart';
+import '../components/dissolvenza.dart';
 import '../components/ordinamento_shortcut.dart';
 import '../components/pulsante_tondo.dart';
 import '../components/scheda_impianto.dart';
@@ -652,52 +653,27 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
               boxShadow: PienoElevations.schedaPrincipale,
             ),
             clipBehavior: Clip.antiAlias,
-            child: Stack(
+            child: Column(
               children: [
-                Column(
-                  children: [
-                    _maniglia(),
-                    // La lista occupa ciò che resta del box e viene ritagliata da esso: il
-                    // suo rimbalzo resta dentro il pannello, non lo scopre mai.
-                    // Il contenuto osserva carburante/elenco/selezione/posizione in un
-                    // Consumer isolato: i loro cambi ricostruiscono solo il foglio, non la
-                    // mappa (L2).
-                    Expanded(
-                      child: Consumer(
-                        builder: (context, ref, _) => _contenuto(ref, scrollController),
-                      ),
+                _maniglia(),
+                // La lista occupa ciò che resta del box e viene ritagliata da esso: il
+                // suo rimbalzo resta dentro il pannello, non lo scopre mai.
+                // Sfuma ai due bordi: in testa scivola sotto la maniglia invece di
+                // tagliarsi contro di essa, in coda sotto lo switch flottante.
+                // Il contenuto osserva carburante/elenco/selezione/posizione in un
+                // Consumer isolato: i loro cambi ricostruiscono solo il foglio, non la
+                // mappa (L2).
+                Expanded(
+                  child: Dissolvenza(
+                    alto: 12,
+                    basso: kSpazioSwitchFlottante +
+                        MediaQuery.of(context).padding.bottom,
+                    child: Consumer(
+                      builder: (context, ref, _) => _contenuto(ref, scrollController),
                     ),
-                  ],
+                  ),
                 ),
-                _dissolvenzaInCoda(),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Lo switch flottante galleggia sopra il foglio, alla stessa altezza che ha su "Vicino a
-  // te". Perché non sembri appiccicato sopra il contenuto, l'ultimo tratto del foglio
-  // sfuma nel colore del pannello: le righe non vengono tagliate a metà dallo switch, si
-  // dissolvono sotto di lui. Decorativa e non cliccabile: la lista sotto resta toccabile.
-  Widget _dissolvenzaInCoda() {
-    final altezza =
-        MediaQuery.of(context).padding.bottom + kSpazioSwitchFlottante;
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: altezza,
-      child: const IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0x00F7FAFB), PienoColors.foglio, PienoColors.foglio],
-              stops: [0, 0.55, 1],
             ),
           ),
         ),
