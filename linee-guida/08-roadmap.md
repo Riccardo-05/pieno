@@ -79,3 +79,25 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 ## Dopo il rilascio
 
 Confronto lungo il percorso, CarPlay e Android Auto, tema scuro, e solo allora la valutazione della navigazione interna con Ferrostar.
+
+---
+
+## Cosa manca, dichiarato
+
+Tutto ciò che il documento di progetto colloca **«solo quando servirà»** o **«dopo il rilascio»**, più i limiti reali dell'ambiente:
+
+- **Backend:** account e sincronizzazione, aggregazione delle segnalazioni con la **regola delle tre conferme**, notifiche push. Oggi le segnalazioni restano in **coda locale** e il ritorno dopo il rifornimento è un **prompt all'avvio**, non una notifica.
+- **Voci «da definire»:** titolare privacy e contatto, **bundle id** (ancora `com.example.pieno`), hosting dell'informativa privacy.
+- **Pagina pubblica sulla qualità dei dati** scritta per chi guida, non il log tecnico del job: finché non esiste, dalle Impostazioni non si linka il `report-qualita.md`.
+- **Accessibilità:** lettura vocale dei prezzi («2,059 euro al litro»), oggi assente — è anche una voce della checklist di rilascio.
+- **Fase 5 e oltre:** navigazione interna con **Ferrostar**, tema scuro, confronto lungo il percorso, CarPlay / Android Auto.
+
+## Direzione consigliata
+
+In ordine di valore, con la regola di spesa del progetto (niente servizi a pagamento prima che esista una funzione usata davvero):
+
+1. **Chiudere la Tappa 07 sul serio:** cambiare bundle id, pubblicare la privacy e fare un **rilascio interno Android**. È il passo che trasforma il progetto in prodotto. Font e icona ci sono già; l'app gira su iPhone reale.
+2. **Attendibilità del dato** — è il capitolo che decide tutto. Prima i due guasti aperti in `revisione/REVISIONE.md` (`E5`, la data del dato non letta dal CSV, e `I3`, il job notturno fermo), poi la **Ricerca dell'Osservatorio** come seconda fonte e la **regola R1** con i confini comunali ISTAT. Infine il primo **audit sul campo** su 100 impianti.
+3. **Backend minimo, solo quando i numeri lo giustificano:** un endpoint per **ricevere le segnalazioni** (svuotare la coda locale) e applicare la regola delle tre conferme. Da qui, account e sincronizzazione.
+4. **Rifiniture UX:** tema scuro (stesso vetro su fondo `#0E1620`), stato «senza connessione» curato, accessibilità dei prezzi.
+5. **Fase 5** (navigazione interna con Ferrostar) **solo** quando esiste un server percorsi e un numero di utenti che lo giustifica: prima, uscire verso il navigatore di sistema è la scelta corretta, non un ripiego.
