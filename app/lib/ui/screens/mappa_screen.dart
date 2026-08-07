@@ -117,10 +117,6 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   String? _provinciaCentrata; // per ricentrare solo al cambio di provincia
   final _sheetController = DraggableScrollableController();
   bool _boxMossoDallaPresa = false; // il gesto sulla scheda ha mosso il box, non la lista
-  // Vero solo quando la selezione nasce dal tocco su un marcatore: in quel caso la mappa
-  // non deve muoversi sotto il dito. Da ogni altra parte — elenco del foglio, chip di
-  // «Vicino a te» — l'utente non sta guardando la mappa, e va portato sul punto.
-  bool _selezioneDaMarcatore = false;
   // Controller della lista dentro il foglio: lo fornisce DraggableScrollableSheet al suo
   // builder, e serve qui per riportare l'elenco sulla scheda quando cambia la selezione.
   ScrollController? _scrollFoglio;
@@ -296,7 +292,6 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
 
   void _toggleSelezione(String id) {
     HapticFeedback.selectionClick();
-    _selezioneDaMarcatore = true;
     // Ritoccando la stazione già selezionata la si deseleziona.
     final corrente = ref.read(selezionatoProvider);
     ref.read(selezionatoProvider.notifier).state = corrente == id ? null : id;
@@ -385,36 +380,16 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final punto = LatLng(imp!.lat!, imp.lon!);
 
     final zoom = c.cameraPosition?.zoom ?? 11;
-    final daMarcatore = _selezioneDaMarcatore;
-    _selezioneDaMarcatore = false;
 
-    if (daMarcatore) {
-      // Tocco su un marcatore: il foglio si apre almeno all'altezza di riposo, ma la mappa
-      // si muove solo se il punto è fuori schermo — non deve scappare sotto il dito di chi
-      // l'ha appena toccato.
-      _portaFoglioA(_foglioMedio, soloSePiuBasso: true);
-      bool visibile = false;
-      try {
-        final area = await c.getVisibleRegion();
-        visibile = punto.latitude >= area.southwest.latitude &&
-            punto.latitude <= area.northeast.latitude &&
-            punto.longitude >= area.southwest.longitude &&
-            punto.longitude <= area.northeast.longitude;
-      } catch (_) {
-        return; // regione non disponibile: meglio ferma che mossa a sproposito
-      }
-      if (visibile && zoom >= _zoomIniziale) return;
-      _movimentoProgrammatico = true;
-      final zoomFinale = zoom < _zoomIniziale ? _zoomIniziale : zoom;
-      await c.animateCamera(
-        CameraUpdate.newLatLngZoom(_centroVisibile(punto, zoomFinale), zoomFinale),
-      );
-      return;
-    }
-
-    // Selezione dall'elenco (o da «Vicino a te»): il marcatore va portato al CENTRO della
-    // fascia di mappa che resterà scoperta, e il foglio riportato all'altezza di riposo —
-    // se resta alto copre il punto che si è appena chiesto di vedere.
+    // Un impianto selezionato finisce sempre al CENTRO della fascia di mappa che resterà
+    // scoperta, e il foglio torna all'altezza di riposo — se resta alto copre il punto che
+    // si è appena chiesto di vedere. Vale sia toccando un marcatore sia scegliendo
+    // dall'elenco: due strade per la stessa intenzione, e una sola risposta.
+    //
+    // Il tocco sul marcatore aveva una regola sua — muovere la mappa solo se il punto era
+    // fuori schermo, per non farlo scappare sotto il dito. Rinunciarci costa che la pillola
+    // toccata si sposti; in cambio non finisce mai sotto il foglio che si sta aprendo, che
+    // è il caso in cui serviva davvero guardarla.
     _portaFoglioA(_foglioMedio);
     _movimentoProgrammatico = true;
     final zoomFinale = zoom < _zoomIniziale ? _zoomIniziale : zoom;
