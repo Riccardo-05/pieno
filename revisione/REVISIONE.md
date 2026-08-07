@@ -87,10 +87,14 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
   già dichiarava `config.yaml` (`risparmio.confronto: provincia`). L'app la legge da lì
   (`mediaRiferimentoProvider`) e ripiega sulla media dell'elenco solo per i file salvati
   prima che il campo esistesse. Il «risparmi X €» non si muove più col raggio.
-- [x] 🟠 **E2 — Distanza in linea d'aria.** Ora la scheda lo dichiara: «a 4,2 km in linea
-  d'aria». La distanza stradale resta Fase 5 (serve un servizio di percorsi).
-- [ ] 🟡 **E3 — «al netto della deviazione» non implementato.** Il risparmio è lordo
-  (`deviazioneEuro` = 0, «da definire»).
+- [~] 🟠 **E2 — Distanza in linea d'aria.** Dichiarata nella scheda («a 4,2 km in linea
+  d'aria»), ma resta il difetto vero: **falsa la classifica**, perché due impianti alla
+  stessa distanza in aria possono essere a 4,5 e 11 km di strada. Si chiude con le distanze
+  reali — piano in `linee-guida/10-percorsi-e-backend.md`.
+- [~] 🟠 **E3 — «al netto della deviazione» non implementato.** Il risparmio è lordo
+  (`deviazioneEuro` = 0), quindi un impianto lontano può risultare conveniente anche quando
+  raggiungerlo costa più di ciò che fa risparmiare. Si chiude nella Fase 6 dello stesso
+  piano, sui chilometri veri. Alzato a media: non è una rifinitura, è un numero falso.
 - [ ] 🟡 **E4 — Orari OSM a copertura parziale** (dichiarato). Nessuna azione.
 
 ## F · Accessibilità
@@ -113,6 +117,16 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
   (`_minimoVisibile`, 1,5 s) parte insieme al lavoro e si aspetta solo l'eventuale
   residuo. Da misurare su device se si avvicina all'obiettivo di 1 s.
 
+## M · Da guardare sul telefono
+
+- [ ] 🟡 **M5 — La scheda segue il criterio di ordinamento.** Collegamento verificato nel
+  codice; resta da confermare sul device. Atteso: senza selezione, scheda e marcatore in
+  menta si aggiornano insieme al cambio di criterio; con un impianto selezionato la scheda
+  resta su quello — la scelta esplicita vince — e si sposta solo il marcatore.
+- [ ] 🟡 **M7 — Card di accesso nelle Impostazioni.** Riccardo non ne è convinto. Strade:
+  toglierla finché la sincronizzazione non esiste, ridurla a una riga come le altre, o
+  lasciarla. **Serve una sua decisione.**
+
 ## H · Test
 
 - [ ] 🟠 **H1 — Copertura bassa.** 20 test: risparmio, ordinamento, modello, geojson,
@@ -124,6 +138,9 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 
 ## I · Pipeline (Python)
 
+- [ ] 🟡 **I4 — Il calcolo dei fattori stradali passerà sul mini PC** (Fase 5 del piano
+  percorsi), togliendo a GitHub Actions un lavoro che i suoi 14 GB di disco reggerebbero a
+  fatica. Fino ad allora la distanza resta in linea d'aria.
 - [ ] 🟠 **I1 — Overpass in CI può andare in timeout.** `orari.py` interroga tutta Italia
   sull'istanza pubblica: best-effort già gestito (skip su errore), ma la copertura dipende
   dal mirror. Valutare mirror alternativo + un retry.

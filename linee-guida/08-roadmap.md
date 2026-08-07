@@ -8,73 +8,34 @@ Le sette tappe con i rispettivi esiti (pagina 14 del documento di progetto). Ogn
 | --- | --- | --- |
 | 01 · Dati | ✅ conclusa | Pipeline in `data-pipeline/`, validatore + report + job notturno. Dati pubblici su GitHub Pages: https://riccardo-05.github.io/pieno/manifest.json |
 | 02 · Scheletro dell'app | ✅ conclusa | Progetto Flutter in `app/`, verificato con `flutter run -d chrome` su dati veri. |
-| 03 · Vicino a te | ✅ conclusa | Schermata 3 completa: più conveniente, risparmio sul pieno, tre alternative, «Portami qui», stati vuoto/offline. Provata su Chrome. Provincia fissa a MI (vedi Tappa 04). |
-| 04 · Mappa | ✅ conclusa | MapLibre + stile personalizzato, marcatori-pillola con collisioni e cluster, foglio inferiore, selezione condivisa, puntino posizione, «cerca in questa zona», provincia dalla posizione. |
+| 03 · Vicino a te | ✅ conclusa | Schermata 3 completa: più conveniente, risparmio sul pieno, alternative toccabili che portano alla Mappa, «Portami qui», stati vuoto/offline. La provincia si sceglie dalla posizione (Tappa 04). |
+| 04 · Mappa | ✅ conclusa | MapLibre + stile personalizzato, marcatori-pillola con collisioni e cluster, foglio sovrapposto (box + lista), selezione condivisa, puntino posizione, «cerca in questa zona», provincia dalla posizione. |
 | 05 · Impostazioni e account | ✅ conclusa | Schermata 4 (cinque gruppi) e Schermata 1 (accesso/registrazione/«entra senza account»). Impostazioni **funzionanti**: carburante, navigatore, ordinamento (3 vie), raggio, capacità serbatoio, escludi età — tutte persistite localmente. Manca solo la sincronizzazione (serve backend account). |
 | 06 · Fiducia | ✅ conclusa (lato app) | Segnalazione prezzo errato (coda locale), ritorno dopo il rifornimento. Lato server/processo (regola tre conferme, notifiche push, audit sul campo) documentato, da eseguire. |
 | 07 · Prova e rilascio | 🔨 materiali pronti | Documenti in `rilascio/` (privacy, scheda store, piano test). Nome «Pieno», **icona**, **bundle id** (`io.github.riccardo05.pieno`) e **versione** (`1.0.0+1`) a posto; l'app gira su iPhone reale. Restano da fare da te: account sviluppatore, screenshot, privacy pubblicata a un URL, prova utenti e prova sul campo, build e upload (Android → iOS). |
 | 08 · Extra e rifiniture | 🔨 in corso | **Fatto:** stelle valutazione interne (le esterne richiedono un'API); schermata di caricamento; prezzi **solo self** e **orari da OpenStreetMap** (`opening_hours`), con Aperto/Chiuso calcolato nell'app; foglio della mappa riscritto come box + lista (vedi `07-mappa-e-navigazione.md`); switch flottante fermo e uguale nelle due viste; alternative toccabili che portano alla Mappa; accessibilità (lettura vocale dei prezzi e contrasto AA misurato, con tre colori scuriti); media del risparmio ancorata alla provincia; distanza dichiarata «in linea d'aria»; avvio non più in fila con l'attesa della schermata di caricamento. **Da fare:** tema scuro, testo dinamico. |
 
-## 01 · Dati — 2–3 settimane
+## Le sette tappe e i loro esiti
 
-- Scaricare i due CSV MIMIT e documentarne colonne, separatore e codifica.
-- Scrivere il validatore con le sette regole di pagina 12.
-- Generare i file per provincia in formato compatto e versionato.
-- Automatizzare tutto in un job notturno su GitHub Actions.
-- Pubblicare su CDN gratuita e produrre il report giornaliero di qualità.
+Il piano originale, tenuto per memoria di cosa doveva produrre ogni tappa. Le stime in
+settimane sono state tolte: erano previsioni, e oggi confondono chi legge lo stato.
 
-**Esito:** un URL pubblico con dati puliti e datati.
+| Tappa | Esito che doveva produrre | Prodotto? |
+| --- | --- | --- |
+| 01 · Dati | Un URL pubblico con dati puliti e datati | ✅ |
+| 02 · Scheletro | L'app apre e mostra dati veri | ✅ |
+| 03 · Vicino a te | La prima versione utile a un vero automobilista | ✅ |
+| 04 · Mappa | La schermata di avvio definitiva | ✅ |
+| 05 · Impostazioni e account | Prodotto completo nelle quattro schermate | ✅ tranne la sincronizzazione (serve il backend) |
+| 06 · Fiducia | La difesa contro la disinstallazione | ✅ lato app; regola delle tre conferme e audit sul campo restano |
+| 07 · Prova e rilascio | Pubblicazione sugli store | 🔨 in corso |
 
-## 02 · Scheletro dell'app — 2 settimane
+## In corso, fuori dalle sette tappe
 
-- Progetto Flutter, token di design come costanti, font Sora e Manrope.
-- Componenti di base: pillola, switch, pulsante tondo, bottone primario, scheda.
-- Archivio locale e scaricamento del file di provincia.
-- Permessi di posizione con la spiegazione prima del dialogo.
-
-**Esito:** l'app apre e mostra dati veri, senza interfaccia definitiva.
-
-## 03 · Vicino a te — 2 settimane
-
-- Calcolo del più conveniente e del risparmio sul pieno.
-- Schermata 3 completa, incluse le tre alternative.
-- «Portami qui» verso il navigatore di sistema.
-- Stato senza risultati e stato senza connessione.
-
-**Esito:** la prima versione utile a un vero automobilista.
-
-## 04 · Mappa — 3 settimane
-
-- MapLibre con stile personalizzato ed etichette ridotte.
-- Marcatori-prezzo con collisioni e raggruppamento.
-- Foglio inferiore trascinabile e selezione condivisa con l'elenco.
-- Switch flottante e stato unico tra le due viste.
-
-**Esito:** la schermata di avvio definitiva.
-
-## 05 · Impostazioni e account — 2 settimane
-
-- Schermata 4 con i cinque gruppi e la persistenza locale.
-- Schermata 1 con accesso, registrazione ed «entra senza account».
-- Sincronizzazione di preferiti e preferenze.
-- Attribuzioni di licenza e informativa privacy.
-
-**Esito:** prodotto completo nelle quattro schermate.
-
-## 06 · Fiducia — 2 settimane
-
-- Segnalazione di prezzo errato e regola delle tre conferme.
-- Notifica di ritorno dopo il rifornimento.
-- Pagina pubblica sulla qualità dei dati.
-- Primo audit sul campo su 100 impianti.
-
-**Esito:** la difesa contro la disinstallazione.
-
-## 07 · Prova e rilascio — 2 settimane
-
-- Test con cinque utenti nei tre scenari, due iterazioni.
-- Account sviluppatore, materiali per gli store, informativa.
-- Rilascio prima su Android, poi su iOS.
+**Percorsi reali** — servizio OSRM auto-ospitato sul mini PC di casa, per distanze su
+strada e risparmio al netto della deviazione. Piano completo in
+[`10-percorsi-e-backend.md`](10-percorsi-e-backend.md). È anche il server su cui
+arriveranno, dopo, segnalazioni e account.
 
 ## Dopo il rilascio
 

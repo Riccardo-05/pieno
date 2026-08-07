@@ -31,6 +31,7 @@ Questa cartella di linee guida resta accanto al codice e viene letta a ogni sess
 | `07-mappa-e-navigazione.md` | Stile mappa, marcatori, handoff, Ferrostar. |
 | `08-roadmap.md` | Le sette tappe con i rispettivi esiti. |
 | `09-checklist-rilascio.md` | Controlli obbligatori prima di ogni pubblicazione. |
+| `10-percorsi-e-backend.md` | Servizio percorsi auto-ospitato: perché, come, in che ordine. |
 | `design-tokens.json` | Colori, caratteri, raggi, ombre e spaziature in chiavi leggibili da codice. |
 
 ## Come tenerli vivi
