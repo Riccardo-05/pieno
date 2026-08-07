@@ -1,0 +1,11 @@
+# Binario e roba prodotta dall'esecuzione: si ricostruisce, non si versiona.
+percorsi.exe
+percorsi
+
+# Stato locale di questa macchina.
+.grafo-attivo
+versione-grafo.txt
+log/
+
+# Uscita del calcolo mensile: cambia ogni mese, la consuma la pipeline.
+fattori-stradali.json

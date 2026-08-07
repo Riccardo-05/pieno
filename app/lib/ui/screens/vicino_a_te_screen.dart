@@ -8,9 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/location_service.dart';
 import '../../data/navigator_launcher.dart';
+import '../../data/percorsi_repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
-import '../../domain/geo.dart';
 import '../../domain/risparmio.dart';
 import '../../models/carburante.dart';
 import '../../models/impianto.dart';
@@ -138,8 +138,13 @@ class VicinoATeScreen extends ConsumerWidget {
     final selezionato = ref.watch(selezionatoProvider);
     final migliore = ordinati.first;
     final prezzoMigliore = migliore.prezzoDi(c)!.valore;
-    final risparmio =
-        media == null ? 0.0 : risparmioSulPieno(prezzoMigliore, media, litri: capacita);
+    // Netto della deviazione: il più vicino non paga nulla, gli altri pagano i
+    // chilometri in più. Con le sole stime la deviazione vale zero (Fase 6).
+    final risparmio = media == null
+        ? 0.0
+        : risparmioSulPieno(prezzoMigliore, media,
+            litri: capacita,
+            deviazioneEuro: ref.watch(deviazioneProvider)[migliore.id] ?? 0);
 
     final alternative = ordinati.skip(1).take(_maxAlternative).toList();
 
@@ -149,7 +154,7 @@ class VicinoATeScreen extends ConsumerWidget {
           impianto: migliore,
           carburante: c,
           risparmioEuro: risparmio,
-          distanzaKm: _dist(migliore, pos),
+          distanza: _distanza(ref, migliore, pos),
           onPortamiQui: () {
             _segnaRientro(ref, migliore, prezzoMigliore);
             _portamiQui(context, migliore, nav);
@@ -186,9 +191,13 @@ class VicinoATeScreen extends ConsumerWidget {
     );
   }
 
-  double? _dist(Impianto i, Posizione? pos) {
+  /// Distanza su strada quando il servizio percorsi ha risposto, stima in linea
+  /// d'aria finché non risponde (o non risponde affatto: di notte è spento).
+  /// La stima è immediata e sincrona, così la riga non sparisce mai per un attimo
+  /// in attesa della rete.
+  DistanzaImpianto? _distanza(WidgetRef ref, Impianto i, Posizione? pos) {
     if (pos == null || i.lat == null || i.lon == null) return null;
-    return distanzaKm(pos.lat, pos.lon, i.lat!, i.lon!);
+    return ref.watch(distanzeProvider).valueOrNull?[i.id] ?? stimaInLineaDAria(pos, i);
   }
 
   // Prepara il "ritorno dopo il rifornimento": al prossimo avvio chiederà conferma.

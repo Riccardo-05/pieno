@@ -88,15 +88,23 @@ def esegui(args: argparse.Namespace) -> int:
     print(f"Età del file: {m['eta_file_ore']} h (limite {m['eta_massima_file_ore']:.0f} h) "
           f"→ esito {rep['esito_pubblicazione']}")
 
+    # Fattori stradali del servizio percorsi (Fase 5): facoltativi. La build notturna
+    # gira su GitHub Actions e non deve dipendere da una macchina di casa: se il file
+    # non c'è, i record escono senza `fs` e l'app resta alla stima in linea d'aria.
+    fattori = build.carica_fattori(args.fattori)
+    if args.fattori and not fattori:
+        print(f"Attenzione: nessun fattore stradale letto da {args.fattori} → le distanze "
+              "stimate resteranno in linea d'aria.", file=sys.stderr)
+
     # --- pubblicazione atomica (solo se il report supera le soglie) ----------------
     if rep["esito_pubblicazione"] != "ok" and not args.forza:
         print("Pubblicazione bloccata dal report di qualità. Uso --forza per ignorare (sconsigliato).",
               file=sys.stderr)
-        build.costruisci(impianti.values(), cfg, ver, data_dato)  # in staging, non pubblicato
+        build.costruisci(impianti.values(), cfg, ver, data_dato, fattori)  # staging, non pubblicato
         report.scrivi(rep, cfg)
         return 1
 
-    build.costruisci(impianti.values(), cfg, ver, data_dato)
+    build.costruisci(impianti.values(), cfg, ver, data_dato, fattori)
     dest = build.pubblica_atomica(cfg)
     report.scrivi(rep, cfg)
     print(f"Pubblicato in {dest} (versione {ver}).")
@@ -110,6 +118,8 @@ def main(argv=None) -> int:
     p.add_argument("--anagrafica", help="File locale anagrafica_impianti_attivi.csv")
     p.add_argument("--prezzi", help="File locale prezzo_alle_8.csv")
     p.add_argument("--forza", action="store_true", help="Pubblica anche se il report è sotto soglia")
+    p.add_argument("--fattori", default=None,
+                   help="fattori-stradali.json del servizio percorsi (facoltativo, Fase 5)")
     return esegui(p.parse_args(argv))
 
 

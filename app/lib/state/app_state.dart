@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/location_service.dart';
+import '../data/percorsi_repository.dart';
 import '../data/repository.dart';
 import '../domain/geo.dart';
 import '../domain/risparmio.dart';
@@ -130,6 +131,14 @@ final capacitaLitriProvider = StateProvider<int>((ref) {
   final prefs = ref.watch(prefsProvider);
   ref.listenSelf((_, next) => prefs.setInt('capacita', next));
   return prefs.getInt('capacita') ?? 50;
+});
+
+/// Consumo medio dell'auto in litri per 100 km (Impostazioni → Rifornimento).
+/// È l'unico dato che serve per dire quanto costa andare più lontano.
+final consumoProvider = StateProvider<double>((ref) {
+  final prefs = ref.watch(prefsProvider);
+  ref.listenSelf((_, next) => prefs.setDouble('consumo', next));
+  return prefs.getDouble('consumo') ?? RisparmioConfig.consumoPredefinito;
 });
 
 /// Ordina secondo il criterio scelto. Prezzo: crescente. Distanza: dal più vicino
@@ -273,6 +282,79 @@ final posizioneProvider = FutureProvider<Posizione?>((ref) async {
   } catch (_) {
     return null;
   }
+});
+
+// ---- Distanze su strada (linee-guida/10-percorsi-e-backend.md, Fase 4). ----
+
+/// URL del servizio percorsi. Vuoto finché la Fase 3 non pubblica il dominio:
+/// con l'URL vuoto l'app non prova nemmeno, e resta sulla stima **dichiarata**.
+/// Si passa alla build senza toccare il codice:
+///   flutter run --dart-define=PIENO_PERCORSI=https://percorsi.esempio.it
+const String kBaseUrlPercorsi = String.fromEnvironment('PIENO_PERCORSI');
+
+final percorsiProvider = Provider<ServizioPercorsi>((ref) {
+  final servizio = PercorsiHttp(baseUrl: kBaseUrlPercorsi);
+  ref.onDispose(servizio.dispose);
+  return servizio;
+});
+
+/// Distanze verso gli impianti dell'elenco: **su strada** quando il servizio
+/// risponde, **in linea d'aria** quando no — e in entrambi i casi ognuna porta
+/// scritto da dove viene, perché l'app lo possa dire invece di far finta.
+///
+/// Il servizio ha un tetto di due secondi e sta su una macchina spenta dalle
+/// 02:00 alle 08:00: il ripiego non è un caso d'eccezione, è un quarto delle
+/// giornate. Per questo non c'è nessun percorso in cui la schermata aspetti.
+final distanzeProvider = FutureProvider<Map<String, DistanzaImpianto>>((ref) async {
+  final pos = ref.watch(posizioneProvider).valueOrNull;
+  if (pos == null) return const {};
+
+  final elenco = ref.watch(elencoProvider);
+  final suStrada = await ref.watch(percorsiProvider).distanze(pos, elenco) ?? const {};
+
+  return {
+    for (final i in elenco)
+      if (i.lat != null && i.lon != null)
+        i.id: suStrada[i.id] ?? stimaInLineaDAria(pos, i),
+  };
+});
+
+/// Costo della deviazione per ogni impianto dell'elenco, in euro
+/// (linee-guida/10-percorsi-e-backend.md, Fase 6).
+///
+/// Si paga rispetto **al più vicino**: chi è già il più vicino non deve niente,
+/// gli altri pagano i chilometri in più andata e ritorno. Il risparmio mostrato
+/// diventa netto, e in alcune zone la pastiglia sparirà — non è un peggioramento,
+/// è l'app che smette di promettere risparmi che non esistono.
+///
+/// Finché le distanze sono stime in linea d'aria la deviazione resta a zero: un
+/// numero calcolato col righello sarebbe una finta precisione, e il risparmio
+/// lordo dichiarato è più onesto di un netto inventato.
+final deviazioneProvider = Provider<Map<String, double>>((ref) {
+  final distanze = ref.watch(distanzeProvider).valueOrNull;
+  if (distanze == null || distanze.isEmpty) return const {};
+
+  final suStrada = {
+    for (final voce in distanze.entries)
+      if (voce.value.reale) voce.key: voce.value.km,
+  };
+  if (suStrada.isEmpty) return const {};
+
+  final piuVicino = suStrada.values.reduce(min);
+  final consumo = ref.watch(consumoProvider);
+  final carburante = ref.watch(carburanteProvider);
+  final elenco = ref.watch(elencoProvider);
+
+  return {
+    for (final i in elenco)
+      if (suStrada.containsKey(i.id) && i.prezzoDi(carburante) != null)
+        i.id: costoDeviazione(
+          kmImpianto: suStrada[i.id]!,
+          kmPiuVicino: piuVicino,
+          consumoLitriPer100km: consumo,
+          prezzoAlLitro: i.prezzoDi(carburante)!.valore,
+        ),
+  };
 });
 
 // ---- Fiducia (Tappa 06). Segnalazioni e ritorno, persistiti localmente. ----

@@ -111,9 +111,10 @@ class ImpostazioniScreen extends ConsumerWidget {
         ),
       );
 
-  // 2 — Rifornimento: carburante, capacità serbatoio (modalità = da definire).
+  // 2 — Rifornimento: carburante, capacità serbatoio, consumo medio.
   Widget _gruppoRifornimento(WidgetRef ref) {
     final capacita = ref.watch(capacitaLitriProvider);
+    final consumo = ref.watch(consumoProvider);
     return _Gruppo(
       titolo: 'RIFORNIMENTO',
       figli: [
@@ -127,6 +128,16 @@ class ImpostazioniScreen extends ConsumerWidget {
           min: 30, max: 90, divisioni: 12,
           formato: (v) => '${v.round()} l',
           onChange: (v) => ref.read(capacitaLitriProvider.notifier).state = v.round(),
+        ),
+        // Serve a dire quanto costa andare più lontano: il risparmio mostrato è
+        // al netto della deviazione, e la deviazione si paga in carburante.
+        _RigaSlider(
+          titolo: 'Consumo medio',
+          valore: consumo,
+          min: 3, max: 15, divisioni: 24,
+          formato: (v) => '${v.toStringAsFixed(1).replaceAll('.', ',')} l/100 km',
+          onChange: (v) =>
+              ref.read(consumoProvider.notifier).state = (v * 10).roundToDouble() / 10,
         ),
       ],
     );

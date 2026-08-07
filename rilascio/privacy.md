@@ -9,19 +9,43 @@ Pieno mostra i prezzi dei carburanti in Italia a partire dai dati aperti del Min
 
 ## Dati trattati
 
-- **Posizione** *(facoltativa)*: usata solo sul dispositivo per calcolare le distanze e
-  scegliere la provincia più vicina. Viene acquisito **un solo rilevamento** a precisione
-  bilanciata e **non viene inviata ad alcun server**. Senza permesso l'app funziona lo stesso.
+- **Posizione** *(facoltativa)*: viene acquisito **un solo rilevamento** a precisione
+  bilanciata. Serve sul dispositivo a scegliere la provincia più vicina e a ordinare gli
+  impianti. Senza permesso l'app funziona lo stesso.
+  Se il **servizio percorsi** è attivo (vedi sotto), la posizione viene inviata a quel
+  servizio insieme alle coordinate degli impianti, per ottenere le distanze **su strada**
+  invece che in linea d'aria. Non viene inviata da nessun'altra parte.
 - **Preferenze** (carburante, navigatore, ordinamento, raggio, capacità serbatoio, ecc.):
   salvate **solo localmente** sul dispositivo.
 - **Segnalazioni di prezzo errato**: restano in **coda locale** sul dispositivo. Finché non
   esiste un servizio dati non vengono trasmesse.
 
+## Il servizio percorsi
+
+Le distanze su strada le calcola un servizio nostro, ospitato su una macchina in Italia.
+È l'**unico** caso in cui la tua posizione lascia il telefono, e vale la pena dire con
+precisione che cosa succede — perché è poco:
+
+- La richiesta contiene la tua posizione e le coordinate degli impianti da confrontare.
+  Nient'altro: nessun identificativo, nessun account, nessun cookie.
+- Le coordinate **non vengono registrate**. Nei log finiscono soltanto conteggi e tempi di
+  risposta.
+- Per non rifare due volte lo stesso calcolo, il servizio tiene in memoria una cache con
+  le coordinate **arrotondate a circa 100 metri**: la chiave non è mai la posizione esatta
+  di qualcuno. La cache sta in memoria, non su disco, e sparisce quando il servizio si ferma.
+- Per difendersi dagli abusi il servizio conta le richieste per client. Non conserva
+  l'indirizzo IP: ne tiene un'**impronta con un numero casuale** che cambia a ogni riavvio.
+- Il servizio può essere spento (di notte lo è). Quando non risponde, l'app **ricade sulla
+  distanza stimata e te lo dice**: non aspetta e non riprova all'infinito.
+
+Se nella tua versione dell'app il servizio non è configurato, l'app non contatta nulla e
+usa solo la stima.
+
 ## Cosa NON facciamo
 
 - Nessun **account obbligatorio**.
 - Nessun **tracciamento pubblicitario**, nessun profilo, nessuna vendita di dati.
-- Nessun server proprietario che riceve la tua posizione.
+- Nessuna **registrazione** delle posizioni: né sul telefono né sul servizio percorsi.
 
 ## Servizi esterni
 
@@ -36,9 +60,10 @@ Pieno mostra i prezzi dei carburanti in Italia a partire dai dati aperti del Min
 
 ## Diritti dell'utente
 
-Poiché non raccogliamo dati personali su server, non c'è un profilo da consultare o
-cancellare da remoto: disinstallando l'app o svuotandone i dati si rimuove tutto ciò che è
-salvato in locale. Per domande: **da definire (email di contatto)**.
+Non c'è un profilo da consultare o cancellare da remoto, perché non ne esiste nessuno: il
+servizio percorsi non conserva né le posizioni né chi le ha chieste. Disinstallando l'app o
+svuotandone i dati si rimuove tutto ciò che è salvato in locale.
+Per domande: **da definire (email di contatto)**.
 
 ## Modifiche
 

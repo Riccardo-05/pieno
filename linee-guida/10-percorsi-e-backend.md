@@ -77,6 +77,22 @@ dominio, due problemi risolti.
 
 Ognuna si chiude con qualcosa di verificabile. Non si passa alla successiva prima.
 
+### Stato di avanzamento
+
+| Fase | Stato | Esito misurato |
+| --- | --- | --- |
+| 1 · Motore | ✅ conclusa | Grafo italiano MLD nel volume Docker `pieno-osrm`. Matrice verso 50 destinazioni in **16–33 ms** (obiettivo < 200 ms). Numeri in [`../percorsi/README.md`](../percorsi/README.md). |
+| 2 · API | ✅ conclusa | Servizio Go in [`../percorsi/`](../percorsi). Le tre rotte rispondono su dati veri; la cache porta la stessa richiesta da 23,7 ms a 1,5–3,7 ms. |
+| 3 · Esposizione | ⏸ **in attesa del dominio** | `cloudflared` installato, procedura scritta nel README del servizio. Serve una zona Cloudflare: è l'unico passo che richiede una spesa e un account, e resta a chi possiede il progetto. |
+| 4 · L'app parla all'API | ✅ conclusa | `app/lib/data/percorsi_repository.dart` dietro interfaccia, tetto di 2 s, ripiego dichiarato, cache a 300 m, nessun tentativo ripetuto a vuoto. |
+| 5 · Fattori stradali | ✅ conclusa | `percorsi/cmd/fattori` calcola il rapporto mediano; la pipeline lo incorpora come `fs` (`--fattori`); l'app lo usa nella stima. |
+| 6 · Risparmio netto | ✅ conclusa | `costoDeviazione()` e la voce «Consumo medio» nel gruppo Rifornimento. Il risparmio mostrato è netto quando le distanze sono reali. |
+
+La Fase 3 è ferma per una ragione dichiarata, non per una dimenticanza: **senza dominio non
+c'è tunnel**. Fino ad allora l'app non contatta nulla e resta sulla stima, dicendolo — che è
+lo stesso comportamento previsto per le sei ore di spegnimento, quindi non è una strada mai
+percorsa: è quella che si percorre un quarto delle giornate.
+
 ### Fase 1 · Il motore, solo in casa
 
 Docker Desktop con back-end WSL2. In `%UserProfile%\.wslconfig` si assegna a WSL una

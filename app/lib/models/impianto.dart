@@ -38,6 +38,15 @@ class Impianto {
   /// OSM non li ha per questo impianto. I prezzi mostrati sono sempre e solo self.
   final String? orari;
 
+  /// Rapporto fra strada e linea d'aria attorno a questo impianto: 1,18 per quello
+  /// sulla statale, 2,40 per quello di là dal fiume. Lo precalcola il servizio
+  /// percorsi una volta al mese (linee-guida/10-percorsi-e-backend.md, Fase 5).
+  ///
+  /// È il **paracadute** per quando il server è spento: con questo la stima resta
+  /// molto più vicina al vero della linea d'aria pura. Null dove la misura non è
+  /// riuscita, e sui file salvati prima che il campo esistesse.
+  final double? fattoreStradale;
+
   const Impianto({
     required this.id,
     required this.nome,
@@ -48,6 +57,7 @@ class Impianto {
     required this.lon,
     required this.prezzi,
     this.orari,
+    this.fattoreStradale,
   });
 
   factory Impianto.fromJson(Map<String, dynamic> j) {
@@ -67,6 +77,7 @@ class Impianto {
       lon: (j['lon'] as num?)?.toDouble(),
       prezzi: prezzi,
       orari: j['oh'] as String?,
+      fattoreStradale: (j['fs'] as num?)?.toDouble(),
     );
   }
 

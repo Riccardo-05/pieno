@@ -2,6 +2,7 @@
 // Contiene sempre e solo: nome, via, distanza, prezzo, risparmio, azione.
 
 import 'package:flutter/material.dart';
+import '../../data/percorsi_repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../domain/orari.dart';
@@ -13,13 +14,25 @@ import 'prezzo_text.dart';
 import 'stelle_valutazione.dart';
 import 'vetro.dart';
 
+/// La distanza dice sempre quanto vale la parola «km» che la accompagna:
+/// «a 4,7 km · 11 min» se è strada vera, «a 4,7 km stimati» se è la linea d'aria
+/// corretta col fattore dell'impianto, «a 4,2 km in linea d'aria» se è il
+/// righello e basta. Null quando non c'è posizione.
+String? _etichettaDistanza(DistanzaImpianto? d) {
+  if (d == null) return null;
+  final km = 'a ${d.km.toStringAsFixed(1).replaceAll('.', ',')} km';
+  if (!d.reale) return d.corretta ? '$km stimati' : "$km in linea d'aria";
+  final minuti = d.tempo == null ? null : (d.tempo!.inSeconds / 60).round();
+  return minuti == null ? km : '$km · $minuti min';
+}
+
 class SchedaImpianto extends StatelessWidget {
   const SchedaImpianto({
     super.key,
     required this.impianto,
     required this.carburante,
     required this.risparmioEuro,
-    required this.distanzaKm,
+    required this.distanza,
     required this.onPortamiQui,
     this.onSegnala,
     this.altezzaAzione = PienoSizes.azionePrimaria,
@@ -28,7 +41,7 @@ class SchedaImpianto extends StatelessWidget {
   final Impianto impianto;
   final Carburante carburante;
   final double risparmioEuro;
-  final double? distanzaKm;
+  final DistanzaImpianto? distanza;
   final VoidCallback onPortamiQui;
   final VoidCallback? onSegnala;
   final double altezzaAzione;
@@ -37,12 +50,11 @@ class SchedaImpianto extends StatelessWidget {
   Widget build(BuildContext context) {
     final prezzo = impianto.prezzoDi(carburante)!;
     final via = [impianto.indirizzo, impianto.comune].where((s) => s.isNotEmpty).join(' · ');
-    // «in linea d'aria» non è pedanteria: la distanza è calcolata sulle coordinate, non
-    // sulle strade, quindi diverge dai km che mostrerà il navigatore un istante dopo. Il
-    // valore stradale arriverà solo con un servizio di percorsi (Fase 5).
-    final dist = distanzaKm == null
-        ? null
-        : 'a ${distanzaKm!.toStringAsFixed(1).replaceAll('.', ',')} km in linea d\'aria';
+    // La distanza dice sempre da dove viene. Quella su strada coincide con i km
+    // che mostrerà il navigatore un istante dopo; quella in linea d'aria no, e
+    // sarebbe scorretto lasciarlo credere — succede quando il servizio percorsi
+    // non risponde (di notte è spento).
+    final dist = _etichettaDistanza(distanza);
 
     return Vetro(
       radius: PienoRadii.schedaPrincipale,

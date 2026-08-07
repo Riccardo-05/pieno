@@ -68,7 +68,7 @@ sapere chi sei.
 | --- | --- |
 | App | Flutter · Riverpod · MapLibre |
 | Dati | Python, GitHub Actions, GitHub Pages |
-| Percorsi | OSRM auto-ospitato (in costruzione, vedi `linee-guida/10-percorsi-e-backend.md`) |
+| Percorsi | OSRM auto-ospitato + API in Go (`percorsi/`) — manca solo l'esposizione |
 | Fonte | [Open data MIMIT](https://www.mimit.gov.it) (IODL 2.0) · mappa © OpenStreetMap |
 
 **Dati pubblici, live:** [`manifest.json`](https://riccardo-05.github.io/pieno/manifest.json)

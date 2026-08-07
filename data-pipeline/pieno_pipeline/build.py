@@ -26,7 +26,32 @@ def _iso(dt) -> str | None:
     return dt.isoformat() if dt else None
 
 
-def _record(imp: Impianto) -> dict:
+def carica_fattori(percorso) -> Dict[str, float]:
+    """Fattori stradali per impianto, prodotti dal servizio percorsi.
+
+    Il file lo genera `percorsi/cmd/fattori` una volta al mese sul mini PC
+    (linee-guida/10-percorsi-e-backend.md, Fase 5). È **facoltativo**: se manca o è
+    illeggibile la build prosegue senza, e l'app resta alla linea d'aria pura —
+    che almeno viene dichiarata tale. Nessun dato inventato.
+    """
+    if not percorso:
+        return {}
+    p = Path(percorso)
+    if not p.exists():
+        return {}
+    try:
+        contenuto = json.loads(p.read_text(encoding="utf-8"))
+        fattori = contenuto.get("fattori") or {}
+        return {
+            str(k): float(v)
+            for k, v in fattori.items()
+            if isinstance(v, (int, float)) and 1.0 <= float(v) <= 20.0
+        }
+    except (ValueError, OSError):
+        return {}
+
+
+def _record(imp: Impianto, fattori: Dict[str, float]) -> dict:
     """Record compatto di un impianto (chiavi corte per ridurre il peso del file)."""
     return {
         "id": imp.id,
@@ -46,6 +71,8 @@ def _record(imp: Impianto) -> dict:
         },
         # Orario di apertura (OpenStreetMap), solo se abbinato: chiave assente altrimenti.
         **({"oh": imp.orari} if imp.orari else {}),
+        # Fattore stradale (servizio percorsi, Fase 5): chiave assente dove manca.
+        **({"fs": fattori[imp.id]} if imp.id in fattori else {}),
     }
 
 
@@ -86,8 +113,14 @@ def versione(data_dato: datetime | None) -> str:
 
 
 def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
-               data_dato: datetime | None) -> dict:
-    """Scrive i file di provincia nella dir di staging e ritorna il manifest."""
+               data_dato: datetime | None,
+               fattori: Dict[str, float] | None = None) -> dict:
+    """Scrive i file di provincia nella dir di staging e ritorna il manifest.
+
+    `fattori` è la mappa id → fattore stradale di `carica_fattori()`: facoltativa,
+    perché la build notturna non deve dipendere da una macchina di casa.
+    """
+    fattori = fattori or {}
     staging = cfg.path("dir_staging")
     prov_dir = staging / "province"
     if staging.exists():
@@ -111,7 +144,7 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
             "attribuzione": ATTRIBUZIONE,
             # Media provinciale per carburante: termine di paragone stabile del risparmio.
             "medie": _medie_provinciali(gruppo),
-            "impianti": [_record(i) for i in sorted(gruppo, key=lambda x: x.id)],
+            "impianti": [_record(i, fattori) for i in sorted(gruppo, key=lambda x: x.id)],
         }
         blob = json.dumps(contenuto, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         (prov_dir / f"{sigla}.json").write_bytes(blob)

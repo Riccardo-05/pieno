@@ -52,7 +52,9 @@ Dove il progetto si discosta dal documento di partenza, la deviazione è **dichi
 | Switch flottante **fermo in fondo** e uguale nelle due viste | `03-schermate.md` | sopra il foglio, in dissolvenza |
 | Fino a **cinque** alternative, e sono toccabili | `01-principi-ux.md`, `03-schermate.md` | massimo tre |
 
-Gli scarti che restano **da definire** (non inventati) sono invece elencati dove servono: settima regola di validazione e confini comunali ISTAT in `05-dati-e-qualita.md`, costo della deviazione nel calcolo del risparmio in `01-principi-ux.md`.
+Gli scarti che restano **da definire** (non inventati) sono invece elencati dove servono: settima regola di validazione e confini comunali ISTAT in `05-dati-e-qualita.md`.
+
+Il **costo della deviazione** non è più fra questi: la formula è `costoDeviazione()` in `app/lib/domain/risparmio.dart` e vive delle distanze su strada del servizio percorsi (`10-percorsi-e-backend.md`, Fase 6).
 
 ## I difetti noti
 

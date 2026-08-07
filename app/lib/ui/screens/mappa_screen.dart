@@ -15,10 +15,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../data/navigator_launcher.dart';
+import '../../data/percorsi_repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../domain/formato.dart';
-import '../../domain/geo.dart';
 import '../../domain/geojson.dart';
 import '../../domain/risparmio.dart';
 import '../../models/carburante.dart';
@@ -860,10 +860,18 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final media = ref.watch(mediaRiferimentoProvider);
     final selezionato = _trova(elenco, selId) ?? elenco.first;
     final prezzoSel = selezionato.prezzoDi(carburante)!.valore;
-    final risparmio =
-        media == null ? 0.0 : risparmioSulPieno(prezzoSel, media, litri: capacita);
+    // Netto della deviazione: il più vicino non paga nulla, gli altri pagano i
+    // chilometri in più. Con le sole stime la deviazione vale zero (Fase 6).
+    final risparmio = media == null
+        ? 0.0
+        : risparmioSulPieno(prezzoSel, media,
+            litri: capacita,
+            deviazioneEuro: ref.watch(deviazioneProvider)[selezionato.id] ?? 0);
+    // Su strada quando il servizio percorsi ha risposto, in linea d'aria finché
+    // non risponde — e la scheda dice sempre quale dei due sta mostrando.
     final dist = (pos != null && selezionato.lat != null && selezionato.lon != null)
-        ? distanzaKm(pos.lat, pos.lon, selezionato.lat!, selezionato.lon!)
+        ? (ref.watch(distanzeProvider).valueOrNull?[selezionato.id] ??
+            stimaInLineaDAria(pos, selezionato))
         : null;
 
     // «Altre»: l'impianto della scheda qui sopra non si ripete nell'elenco, altrimenti
@@ -885,7 +893,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
           impianto: selezionato,
           carburante: carburante,
           risparmioEuro: risparmio,
-          distanzaKm: dist,
+          distanza: dist,
           onPortamiQui: () => _portamiQui(selezionato),
           onSegnala: () => mostraSegnala(context, selezionato, prezzoSel),
           altezzaAzione: PienoSizes.bottoneFoglioMappa,
