@@ -275,14 +275,14 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       if (!_layersToccabili.contains(layerId)) return;
       final diretto = featureId.isNotEmpty ? featureId : null;
       if (diretto != null) {
-        _toggleSelezione(diretto); // via veloce: id già nel callback, niente query
+        _selezionaDaMappa(diretto); // via veloce: id già nel callback, niente query
         return;
       }
       // Ripiego se l'id della feature non fosse disponibile: interroga la mappa.
       c.queryRenderedFeatures(point, _layers, null).then((feats) {
         if (feats.isEmpty) return;
         final id = ((feats.first as Map)['properties'] as Map?)?['id'];
-        if (id != null) _toggleSelezione(id as String);
+        if (id != null) _selezionaDaMappa(id as String);
       });
     });
     await _aggiornaSorgente();
@@ -290,11 +290,23 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     await _aggiornaSelezione();
   }
 
-  void _toggleSelezione(String id) {
+  /// Tocco su una pillola. Non deseleziona più al secondo tocco: la card mostra
+  /// sempre un impianto, quindi toglierne la selezione lascerebbe solo uno stato
+  /// in cui la mappa non evidenzia ciò che la card racconta.
+  void _selezionaDaMappa(String id) {
     HapticFeedback.selectionClick();
-    // Ritoccando la stazione già selezionata la si deseleziona.
-    final corrente = ref.read(selezionatoProvider);
-    ref.read(selezionatoProvider.notifier).state = corrente == id ? null : id;
+    ref.read(selezionatoProvider.notifier).state = id;
+  }
+
+  /// Porta la selezione sul primo dell'elenco, cioè sull'impianto che la card
+  /// mostra secondo il criterio scelto. Da qui discende tutto il resto: il
+  /// marcatore acceso, il centro della mappa e la scheda restano una cosa sola.
+  void _selezionaMigliore() {
+    final elenco = ref.read(elencoProvider);
+    if (elenco.isEmpty) return;
+    final primo = elenco.first.id;
+    if (ref.read(selezionatoProvider) == primo) return; // niente da muovere
+    ref.read(selezionatoProvider.notifier).state = primo;
   }
 
   // Aggiorna SOLO la sorgente del selezionato (una feature): niente lag al tocco.
@@ -518,7 +530,19 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     // L'elenco decide quale marcatore è "il migliore" (vedi _aggiornaSorgente): va
     // riascoltato anche quando cambia solo il raggio o l'ordinamento, che i marcatori non
     // toccano. È un listen, non un watch: non ricostruisce la mappa.
-    ref.listen(elencoProvider, (_, __) => _aggiornaSorgente());
+    ref.listen(elencoProvider, (_, elenco) {
+      _aggiornaSorgente();
+      // Senza selezione la card mostrerebbe il primo dell'elenco mentre sulla mappa non
+      // è acceso niente: due risposte diverse alla stessa domanda, nella stessa schermata.
+      // Quindi non si resta mai senza — all'avvio, e ogni volta che l'elenco si ripopola,
+      // la selezione va sull'impianto che la card sta già mostrando.
+      if (elenco.isNotEmpty && ref.read(selezionatoProvider) == null) _selezionaMigliore();
+    });
+    // Cambiare criterio è una domanda — «chi è il migliore per me, adesso?» — e merita una
+    // risposta visibile. Prima non ne aveva nessuna: con una pillola selezionata la card
+    // continuava a mostrare quella, e l'unico modo di far reagire il comando era
+    // deselezionare, cioè un gesto che nessuno insegna.
+    ref.listen(ordinamentoProvider, (_, __) => _selezionaMigliore());
     ref.listen(selezionatoProvider, (_, id) {
       _aggiornaSelezione(); // leggero: aggiorna solo la sorgente della selezione
       _mostraSelezionato(id); // porta in vista il punto e sistema l'altezza del foglio
