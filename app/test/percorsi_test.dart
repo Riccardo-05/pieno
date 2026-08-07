@@ -198,6 +198,68 @@ void main() {
     });
   });
 
+  group('quando il servizio dice di rallentare', () {
+    test('si aspetta quanto chiede lui, non dieci minuti a prescindere', () async {
+      var chiamate = 0;
+      final servizio = PercorsiHttp(
+        baseUrl: 'http://prova',
+        client: MockClient((_) async {
+          chiamate++;
+          if (chiamate == 1) {
+            return http.Response('{"codice":"troppe_richieste"}', 429,
+                headers: {'retry-after': '0'});
+          }
+          return http.Response(rispostaPer(1), 200);
+        }),
+      );
+      final impianti = [impianto('a', 45.47, 9.22)];
+
+      await servizio.distanze(origine, impianti);
+      final esito = await servizio.distanze(origine, impianti);
+
+      expect(chiamate, 2, reason: 'il servizio ha detto «fra zero secondi»: gli si crede');
+      expect(esito!['a']!.origine, OrigineDistanza.strada);
+    });
+
+    test('senza indicazioni si aspetta la pausa lunga', () async {
+      var chiamate = 0;
+      final servizio = PercorsiHttp(
+        baseUrl: 'http://prova',
+        client: MockClient((_) async {
+          chiamate++;
+          throw const GuastoDiRete();
+        }),
+      );
+      final impianti = [impianto('a', 45.47, 9.22)];
+
+      await servizio.distanze(origine, impianti);
+      await servizio.distanze(origine, impianti);
+
+      expect(chiamate, 1);
+    });
+  });
+
+  group('memoria del telefono', () {
+    test('la cache non cresce senza fine', () async {
+      final servizio = PercorsiHttp(
+        baseUrl: 'http://prova',
+        client: MockClient((richiesta) async {
+          final corpo = jsonDecode(richiesta.body) as Map<String, dynamic>;
+          return http.Response(rispostaPer((corpo['destinazioni'] as List).length), 200);
+        }),
+      );
+
+      // Molte più destinazioni di quante se ne possano tenere.
+      for (var blocco = 0; blocco < 30; blocco++) {
+        await servizio.distanze(origine, [
+          for (var k = 0; k < 100; k++) impianto('b$blocco-$k', 45.47 + k * 0.001, 9.22),
+        ]);
+      }
+
+      expect(servizio.vociInCache, lessThanOrEqualTo(PercorsiHttp.maxVociInCache));
+    });
+  });
+
   group('ripiego', () {
     test("la linea d'aria si dichiara stima", () {
       final d = stimaInLineaDAria(origine, impianto('a', 45.4731, 9.1901));

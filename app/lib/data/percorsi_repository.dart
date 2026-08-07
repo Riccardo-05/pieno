@@ -73,12 +73,27 @@ class PercorsiHttp implements ServizioPercorsi {
   /// Quante destinazioni per richiesta (il servizio ne accetta 100).
   static const int maxPerRichiesta = 100;
 
+  /// Quante distanze si tengono da parte. Una provincia grande ha ~1300 impianti e
+  /// l'utente ne guarda una frazione: oltre questo si stanno conservando risposte per
+  /// posti dove non tornerà. Senza tetto la mappa cresceva per tutta la sessione, e
+  /// l'unica cosa che la svuotava era spostarsi di trecento metri.
+  static const int maxVociInCache = 2000;
+
   final String baseUrl;
   final http.Client _client;
 
   Posizione? _origineInCache;
+
+  /// Distanze note, dalla più vecchia alla più recente: una `Map` in Dart conserva
+  /// l'ordine d'inserimento, ed è quello che serve per sapere chi sfrattare.
   final Map<String, DistanzaImpianto> _cache = {};
-  DateTime? _ultimoBuco;
+
+  /// Fino a quando non vale la pena riprovare. Se è stato il servizio a dirlo, con
+  /// `Retry-After`, si usa il suo numero; altrimenti la pausa lunga.
+  DateTime? _nonPrimaDi;
+
+  /// Quante distanze sono in memoria. Serve a poterlo verificare in un test.
+  int get vociInCache => _cache.length;
 
   PercorsiHttp({required this.baseUrl, http.Client? client})
       : _client = client ?? http.Client();
@@ -106,8 +121,8 @@ class PercorsiHttp implements ServizioPercorsi {
     if (mancanti.isEmpty) return _daCache(destinazioni);
 
     // 2. Se il servizio ha appena taciuto, non lo si stuzzica di nuovo.
-    final buco = _ultimoBuco;
-    if (buco != null && DateTime.now().difference(buco) < pausaDopoIlBuco) {
+    final attesa = _nonPrimaDi;
+    if (attesa != null && DateTime.now().isBefore(attesa)) {
       return _daCache(destinazioni);
     }
 
@@ -119,14 +134,20 @@ class PercorsiHttp implements ServizioPercorsi {
           mancanti.sublist(inizio, math.min(inizio + maxPerRichiesta, mancanti.length)),
         );
       }
+    } on _Rallenta catch (e) {
+      // Il servizio non è rotto: sta dicendo quando ripassare. Ignorarlo e stare
+      // zitti dieci minuti significherebbe rinunciare alle distanze vere per un
+      // limite che magari scade fra tre secondi.
+      _nonPrimaDi = DateTime.now().add(e.fra);
+      return _daCache(destinazioni);
     } on Object {
-      // Qualunque inciampo — servizio spento, rete assente, risposta storta —
+      // Qualunque altro inciampo — servizio spento, rete assente, risposta storta —
       // porta allo stesso posto: si ripiega e lo si dice.
-      _ultimoBuco = DateTime.now();
+      _nonPrimaDi = DateTime.now().add(pausaDopoIlBuco);
       return _daCache(destinazioni);
     }
 
-    _ultimoBuco = null;
+    _nonPrimaDi = null;
     _origineInCache = da;
     return _daCache(destinazioni);
   }
@@ -155,6 +176,9 @@ class PercorsiHttp implements ServizioPercorsi {
         )
         .timeout(tettoTempo);
 
+    if (risposta.statusCode == 429) {
+      throw _Rallenta(_quantoAspettare(risposta.headers['retry-after']));
+    }
     if (risposta.statusCode != 200) {
       throw StateError('il servizio percorsi ha risposto ${risposta.statusCode}');
     }
@@ -168,16 +192,46 @@ class PercorsiHttp implements ServizioPercorsi {
     for (var k = 0; k < blocco.length; k++) {
       final voce = lista[k] as Map<String, dynamic>;
       if (voce['raggiungibile'] != true) continue; // resta alla stima, dichiarata
-      _cache[blocco[k].id] = DistanzaImpianto(
-        km: (voce['metri'] as num).toDouble() / 1000,
-        tempo: Duration(seconds: (voce['secondi'] as num).round()),
-        origine: OrigineDistanza.strada,
+      _ricorda(
+        blocco[k].id,
+        DistanzaImpianto(
+          km: (voce['metri'] as num).toDouble() / 1000,
+          tempo: Duration(seconds: (voce['secondi'] as num).round()),
+          origine: OrigineDistanza.strada,
+        ),
       );
     }
   }
 
+  /// Tiene una distanza, buttando la più vecchia quando lo spazio è finito.
+  void _ricorda(String id, DistanzaImpianto distanza) {
+    _cache.remove(id); // rientra in coda: è la più fresca
+    _cache[id] = distanza;
+    while (_cache.length > maxVociInCache) {
+      _cache.remove(_cache.keys.first);
+    }
+  }
+
+  /// Quanto aspettare secondo il servizio. Un valore assurdo o illeggibile vale come
+  /// nessun valore: si torna alla pausa lunga, che è il ripiego prudente.
+  Duration _quantoAspettare(String? retryAfter) {
+    final secondi = int.tryParse((retryAfter ?? '').trim());
+    if (secondi == null || secondi < 0 || secondi > pausaDopoIlBuco.inSeconds) {
+      return pausaDopoIlBuco;
+    }
+    return Duration(seconds: secondi);
+  }
+
   @override
   void dispose() => _client.close();
+}
+
+/// «Non sono rotto, sto solo chiedendo di rallentare»: il 429 del servizio, con il
+/// tempo che lui stesso indica. Distinguerlo da un guasto è ciò che permette di
+/// riprovare fra tre secondi invece che fra dieci minuti.
+class _Rallenta implements Exception {
+  final Duration fra;
+  const _Rallenta(this.fra);
 }
 
 /// Stima della distanza quando il servizio non c'è: linea d'aria **corretta col

@@ -60,6 +60,45 @@ double costoDeviazione({
   return inPiu * 2 * consumoLitriPer100km / 100 * prezzoAlLitro;
 }
 
+/// Quanto è distante un impianto, e se il numero è misurato o stimato. Il dominio non
+/// conosce né HTTP né OSRM: gli basta sapere quanto, e quanto ci si può contare.
+typedef DistanzaNota = ({double km, bool reale});
+
+/// Costo della deviazione per ogni impianto dell'elenco, in euro.
+///
+/// Due regole, entrambe conseguenze dello stesso principio.
+///
+/// **Il riferimento è il più vicino di tutti**, anche quando la sua distanza è una
+/// stima. Sceglierlo fra i soli impianti misurati lo farebbe dipendere da quali
+/// risposte sono arrivate: se il servizio tace proprio sul più vicino, il riferimento
+/// si allontana, tutte le deviazioni si accorciano e il risparmio mostrato diventa più
+/// roseo del vero. L'errore, quando c'è, deve stare dal lato che non promette.
+///
+/// **Si addebita solo a chi è misurato davvero.** Sottrarre euro sulla base di una
+/// linea d'aria sarebbe finta precisione, e il risparmio lordo è più onesto di un netto
+/// inventato.
+Map<String, double> costiDiDeviazione({
+  required List<Impianto> elenco,
+  required Map<String, DistanzaNota> distanze,
+  required Carburante carburante,
+  required double consumoLitriPer100km,
+}) {
+  if (!distanze.values.any((d) => d.reale)) return const {};
+
+  final piuVicino = distanze.values.map((d) => d.km).reduce((a, b) => a < b ? a : b);
+
+  return {
+    for (final i in elenco)
+      if ((distanze[i.id]?.reale ?? false) && i.prezzoDi(carburante) != null)
+        i.id: costoDeviazione(
+          kmImpianto: distanze[i.id]!.km,
+          kmPiuVicino: piuVicino,
+          consumoLitriPer100km: consumoLitriPer100km,
+          prezzoAlLitro: i.prezzoDi(carburante)!.valore,
+        ),
+  };
+}
+
 /// True se il risparmio va mostrato (>= soglia minima).
 bool risparmioDaMostrare(double risparmio) => risparmio >= RisparmioConfig.sogliaMinimaEuro;
 

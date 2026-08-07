@@ -145,14 +145,30 @@ final consumoProvider = StateProvider<double>((ref) {
 /// (serve la posizione). Bilanciato: media delle due grandezze normalizzate 0–1 nella
 /// zona (0 = migliore), così prezzo e distanza pesano allo stesso modo.
 /// Senza posizione, distanza e bilanciato ricadono sul prezzo.
-List<Impianto> ordina(List<Impianto> impianti, Carburante c, Ordinamento ord, Posizione? pos) {
+///
+/// [kmPerId] porta i chilometri **di strada**, quando il servizio percorsi ha risposto.
+/// Serve perché la classifica usi lo stesso metro della scheda: prima si sceglieva col
+/// righello e si raccontava con la strada, e due impianti alla stessa distanza in aria
+/// possono essere a 4 e a 14 km di strada. Dove il chilometraggio manca si ricade sul
+/// righello per quel solo impianto: meglio una misura approssimata che farlo sparire.
+List<Impianto> ordina(
+  List<Impianto> impianti,
+  Carburante c,
+  Ordinamento ord,
+  Posizione? pos, {
+  Map<String, double>? kmPerId,
+}) {
   final lista = impianti.where((i) => i.prezzoDi(c) != null).toList();
   if (lista.isEmpty) return lista;
 
   double prezzo(Impianto i) => i.prezzoDi(c)!.valore;
-  double dist(Impianto i) => (pos == null || i.lat == null || i.lon == null)
-      ? double.infinity
-      : distanzaKm(pos.lat, pos.lon, i.lat!, i.lon!);
+  double dist(Impianto i) {
+    final suStrada = kmPerId?[i.id];
+    if (suStrada != null) return suStrada;
+    return (pos == null || i.lat == null || i.lon == null)
+        ? double.infinity
+        : distanzaKm(pos.lat, pos.lon, i.lat!, i.lon!);
+  }
 
   if (ord == Ordinamento.prezzo || pos == null) {
     lista.sort((a, b) => prezzo(a).compareTo(prezzo(b)));
@@ -203,17 +219,45 @@ List<Impianto> filtra(
   }).toList();
 }
 
-/// Elenco per "Vicino a te" e per il foglio della Mappa: filtrato (carburante, età,
-/// raggio) e ordinato secondo il criterio scelto. Un'unica fonte per tutte le viste.
-final elencoProvider = Provider<List<Impianto>>((ref) {
+/// Gli impianti della zona col carburante scelto, **senza ordine**.
+///
+/// Esiste per spezzare un cerchio: le distanze si chiedono per questi impianti, e
+/// l'ordine dipende dalle distanze. Se le distanze partissero dall'elenco ordinato,
+/// ognuno dei due aspetterebbe l'altro. Qui si decide *di chi* parlare; nel provider
+/// sotto, *in che ordine*.
+final insiemeFiltratoProvider = Provider<List<Impianto>>((ref) {
   final dati = ref.watch(datiProvinciaProvider).valueOrNull?.dati;
   if (dati == null) return const [];
   final c = ref.watch(carburanteProvider);
   final pos = ref.watch(posizioneProvider).valueOrNull;
-  final ord = ref.watch(ordinamentoProvider);
   final raggio = ref.watch(raggioKmProvider);
-  final filtrati = filtra(dati.impianti, c, pos: pos, raggioKm: raggio);
-  return ordina(filtrati, c, ord, pos);
+  return filtra(dati.impianti, c, pos: pos, raggioKm: raggio);
+});
+
+/// Elenco per "Vicino a te" e per il foglio della Mappa: filtrato (carburante, raggio)
+/// e ordinato secondo il criterio scelto. Un'unica fonte per tutte le viste.
+///
+/// Ordina con i **chilometri migliori che si hanno** per ciascun impianto: quelli di
+/// strada quando il servizio percorsi ha risposto, la stima corretta col fattore
+/// stradale altrimenti, il righello puro come ultimo ripiego. È lo stesso numero che
+/// la scheda mostra — prima la classifica ne usava un altro, e il primo della lista
+/// poteva essere il secondo per strada.
+final elencoProvider = Provider<List<Impianto>>((ref) {
+  final insieme = ref.watch(insiemeFiltratoProvider);
+  if (insieme.isEmpty) return const [];
+  final c = ref.watch(carburanteProvider);
+  final pos = ref.watch(posizioneProvider).valueOrNull;
+  final ord = ref.watch(ordinamentoProvider);
+  final distanze = ref.watch(distanzeProvider).valueOrNull;
+  return ordina(
+    insieme,
+    c,
+    ord,
+    pos,
+    kmPerId: distanze == null
+        ? null
+        : {for (final voce in distanze.entries) voce.key: voce.value.km},
+  );
 });
 
 /// Media di riferimento del carburante scelto: quella **provinciale**, calcolata dalla
@@ -330,11 +374,13 @@ final distanzeProvider = FutureProvider<Map<String, DistanzaImpianto>>((ref) asy
   final pos = ref.watch(posizioneProvider).valueOrNull;
   if (pos == null) return const {};
 
-  final elenco = ref.watch(elencoProvider);
-  final suStrada = await ref.watch(percorsiProvider).distanze(pos, elenco) ?? const {};
+  // Si parte dall'insieme filtrato, non dall'elenco ordinato: è l'elenco a dipendere
+  // da qui, e non si può dipendere da chi dipende da te.
+  final insieme = ref.watch(insiemeFiltratoProvider);
+  final suStrada = await ref.watch(percorsiProvider).distanze(pos, insieme) ?? const {};
 
   return {
-    for (final i in elenco)
+    for (final i in insieme)
       if (i.lat != null && i.lon != null)
         i.id: suStrada[i.id] ?? stimaInLineaDAria(pos, i),
   };
@@ -355,27 +401,15 @@ final deviazioneProvider = Provider<Map<String, double>>((ref) {
   final distanze = ref.watch(distanzeProvider).valueOrNull;
   if (distanze == null || distanze.isEmpty) return const {};
 
-  final suStrada = {
-    for (final voce in distanze.entries)
-      if (voce.value.reale) voce.key: voce.value.km,
-  };
-  if (suStrada.isEmpty) return const {};
-
-  final piuVicino = suStrada.values.reduce(min);
-  final consumo = ref.watch(consumoProvider);
-  final carburante = ref.watch(carburanteProvider);
-  final elenco = ref.watch(elencoProvider);
-
-  return {
-    for (final i in elenco)
-      if (suStrada.containsKey(i.id) && i.prezzoDi(carburante) != null)
-        i.id: costoDeviazione(
-          kmImpianto: suStrada[i.id]!,
-          kmPiuVicino: piuVicino,
-          consumoLitriPer100km: consumo,
-          prezzoAlLitro: i.prezzoDi(carburante)!.valore,
-        ),
-  };
+  return costiDiDeviazione(
+    elenco: ref.watch(elencoProvider),
+    distanze: {
+      for (final voce in distanze.entries)
+        voce.key: (km: voce.value.km, reale: voce.value.reale),
+    },
+    carburante: ref.watch(carburanteProvider),
+    consumoLitriPer100km: ref.watch(consumoProvider),
+  );
 });
 
 // ---- Fiducia (Tappa 06). Segnalazioni e ritorno, persistiti localmente. ----

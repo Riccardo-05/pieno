@@ -36,6 +36,14 @@ class LocalStore {
     return await f.exists() ? f.readAsString() : null;
   }
 
+  /// Butta una zona salvata. Serve quando il file non si lascia più leggere:
+  /// tenerlo significherebbe ripresentare lo stesso errore a ogni avvio.
+  Future<void> rimuoviProvincia(String provincia) async {
+    if (kIsWeb) return;
+    final f = _file(await _dir(), provincia);
+    if (await f.exists()) await f.delete();
+  }
+
   Future<bool> haProvincia(String provincia) async {
     if (kIsWeb) return false;
     final dir = await _dir();

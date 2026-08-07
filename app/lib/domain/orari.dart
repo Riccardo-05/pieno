@@ -74,9 +74,14 @@ InfoApertura statoApertura(String? orari, [DateTime? adesso]) {
 
 List<int> _giorniDi(String regola) {
   final giorni = <int>[];
-  // La parte "giorni" sta prima del primo orario (una cifra). Se non c'è testo prima, la
-  // regola vale tutti i giorni.
-  final m = RegExp(r'^\s*([A-Za-z,\-\s]+?)\s*\d').firstMatch(regola);
+  // La parte "giorni" sta prima di ciò che dice l'orario: un numero («Mo-Sa 07:00»)
+  // oppure la parola che dichiara la chiusura («Su off», «Su closed»).
+  //
+  // Cercare solo la cifra — come si faceva prima — lasciava «Su off» senza giorni, e
+  // senza giorni la regola vale per **tutti**: l'unica regola di chiusura della riga
+  // svuotava la settimana intera e l'app scriveva «Chiuso ora» su impianti aperti il
+  // lunedì mattina. `Mo-Sa …; Su off` è una delle forme più comuni in OSM.
+  final m = RegExp(r'^\s*([A-Za-z,\-\s]+?)\s*(?:\d|off\b|closed\b)').firstMatch(regola);
   final parte = m?.group(1)?.trim() ?? '';
   if (parte.isEmpty) return giorni;
   for (final blocco in parte.split(',')) {
