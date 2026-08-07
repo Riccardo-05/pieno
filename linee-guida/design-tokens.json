@@ -6,7 +6,7 @@
       "uso": "testo principale, filtro attivo, voce selezionata"
     },
     "grafite": {
-      "valore": "#77848F",
+      "valore": "#646F78",
       "uso": "testo secondario, valori nelle impostazioni"
     },
     "menta": {
@@ -18,7 +18,7 @@
       "uso": "azione primaria, marcatore migliore, interruttori attivi"
     },
     "menta-scura": {
-      "valore": "#00806F",
+      "valore": "#007D6D",
       "uso": "testo del risparmio e azioni testuali"
     },
     "menta-velo": {
@@ -26,7 +26,7 @@
       "uso": "sfondo pastiglia risparmio"
     },
     "rame": {
-      "valore": "#C0603A",
+      "valore": "#B15835",
       "uso": "solo prezzi sopra la media di zona"
     },
     "blu-posizione": {
@@ -128,7 +128,7 @@
         "font": "Manrope",
         "peso": 500,
         "dimensione": "15px",
-        "colore": "#77848F"
+        "colore": "#646F78"
       },
       "bottone-primario": {
         "font": "Manrope",

@@ -49,6 +49,22 @@ def _record(imp: Impianto) -> dict:
     }
 
 
+def _medie_provinciali(gruppo: List[Impianto]) -> Dict[str, float]:
+    """Prezzo medio della provincia per carburante.
+
+    È il termine di paragone del «risparmi X € sul pieno» (config: `risparmio.confronto:
+    provincia`). Calcolarlo qui invece che nell'app lo rende **stabile**: l'app lo faceva
+    sull'elenco già filtrato per raggio ed età, quindi bastava allargare il raggio perché
+    il risparmio dichiarato cambiasse a parità di prezzo. Mai la media regionale: dentro
+    la stessa provincia i prezzi variano più della media (pag. 12).
+    """
+    somme: Dict[str, List[float]] = {}
+    for imp in gruppo:
+        for chiave, prezzo in imp.prezzi.items():
+            somme.setdefault(chiave, []).append(prezzo.valore)
+    return {c: round(sum(v) / len(v), 3) for c, v in sorted(somme.items()) if v}
+
+
 def _centroide(gruppo: List[Impianto]) -> dict | None:
     """Baricentro della provincia: media delle coordinate valide degli impianti.
     Serve all'app per scegliere la provincia più vicina alla posizione dell'utente
@@ -93,6 +109,8 @@ def costruisci(impianti: Iterable[Impianto], cfg: Config, ver: str,
             "generato_il": generato_il,
             "provincia": sigla,
             "attribuzione": ATTRIBUZIONE,
+            # Media provinciale per carburante: termine di paragone stabile del risparmio.
+            "medie": _medie_provinciali(gruppo),
             "impianti": [_record(i) for i in sorted(gruppo, key=lambda x: x.id)],
         }
         blob = json.dumps(contenuto, ensure_ascii=False, separators=(",", ":")).encode("utf-8")

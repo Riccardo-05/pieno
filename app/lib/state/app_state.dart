@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/location_service.dart';
 import '../data/repository.dart';
 import '../domain/geo.dart';
+import '../domain/risparmio.dart';
 import '../models/carburante.dart';
 import '../models/impianto.dart';
 import '../models/manifest.dart';
@@ -220,6 +221,23 @@ final elencoProvider = Provider<List<Impianto>>((ref) {
   final eta = ref.watch(etaMassimaGiorniProvider);
   final filtrati = filtra(dati.impianti, c, pos: pos, raggioKm: raggio, etaMaxGiorni: eta);
   return ordina(filtrati, c, ord, pos);
+});
+
+/// Media di riferimento del carburante scelto: quella **provinciale**, calcolata dalla
+/// pipeline e servita nel file di provincia. È il termine di paragone del «risparmi X €
+/// sul pieno» (config della pipeline: `risparmio.confronto: provincia`).
+///
+/// Perché non la media dell'elenco: l'elenco è filtrato per raggio ed età, quindi
+/// allargando il raggio la media si spostava e il risparmio dichiarato cambiava a parità
+/// di prezzo — un numero che si muove senza che si muova il mondo.
+///
+/// Ripiego sulla media dell'elenco solo per i file salvati prima che il campo esistesse.
+final mediaRiferimentoProvider = Provider<double?>((ref) {
+  final dati = ref.watch(datiProvinciaProvider).valueOrNull?.dati;
+  final c = ref.watch(carburanteProvider);
+  final provinciale = dati?.medie[c];
+  if (provinciale != null) return provinciale;
+  return mediaZona(ref.watch(elencoProvider), c);
 });
 
 /// Marcatori della mappa: filtrati per carburante ed età (attendibilità), ma NON per

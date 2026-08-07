@@ -45,8 +45,13 @@ class PienoApp extends StatelessWidget {
   }
 }
 
-/// Mostra la schermata di caricamento a ogni avvio (almeno ~2,6 s) mentre l'app prepara
-/// i dati, poi passa all'app con una dissolvenza (easeInOut).
+/// Mostra la schermata di caricamento mentre l'app prepara posizione e dati, poi passa
+/// all'app con una dissolvenza (easeInOut).
+///
+/// L'attesa minima e il lavoro corrono **in parallelo**: prima erano in fila, quindi
+/// l'avvio costava l'attesa *più* il caricamento. L'obiettivo dichiarato è «< 1 s dal
+/// tocco sull'icona al primo prezzo utile» (06-architettura.md): il minimo qui sotto è il
+/// tempo in cui si vede l'animazione, non un ritardo aggiunto al resto.
 class AvvioGate extends ConsumerStatefulWidget {
   const AvvioGate({super.key});
 
@@ -55,6 +60,10 @@ class AvvioGate extends ConsumerStatefulWidget {
 }
 
 class _AvvioGateState extends ConsumerState<AvvioGate> {
+  /// Quanto si vede almeno la schermata di caricamento. Non allunga l'avvio: corre
+  /// insieme al lavoro, quindi conta solo se il lavoro finisce prima.
+  static const _minimoVisibile = Duration(milliseconds: 1500);
+
   bool _pronto = false;
 
   @override
@@ -64,19 +73,19 @@ class _AvvioGateState extends ConsumerState<AvvioGate> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _avvia());
   }
 
-  /// Sequenza d'avvio standard: caricamento → permessi → dati reali già pronti → app.
+  /// Sequenza d'avvio: permessi → posizione e dati reali → app, con l'animazione visibile
+  /// per almeno [_minimoVisibile] — cronometro fatto partire subito, non dopo.
   Future<void> _avvia() async {
-    // 1) Tempo minimo di visibilità del caricamento (l'animazione si vede tutta).
-    await Future.delayed(const Duration(milliseconds: 4000));
-    if (!mounted) return;
+    final minimo = Future<void>.delayed(_minimoVisibile);
 
-    // 2) Permessi: spiegazione dentro l'app e poi, se accetta, dialogo di sistema.
+    // 1) Permessi: spiegazione dentro l'app e poi, se accetta, dialogo di sistema.
+    //    Va prima dei dati, perché è il consenso a decidere la provincia da scaricare.
     if (ref.read(consensoPosizioneProvider) == null) {
       await mostraSpiegazionePosizione(context);
       if (!mounted) return;
     }
 
-    // 3) Prepara i dati REALI mentre si vede ancora il caricamento.
+    // 2) Prepara i dati REALI mentre si vede ancora il caricamento.
     if (ref.read(consensoPosizioneProvider) == true) {
       // attende il fix di posizione (→ provincia giusta), con tetto di tempo.
       try {
@@ -89,7 +98,11 @@ class _AvvioGateState extends ConsumerState<AvvioGate> {
     } catch (_) {/* offline/errore: l'app mostrerà lo stato adeguato */}
     if (!mounted) return;
 
-    // 4) Pronto: l'app compare con i dati già caricati (nessuno spinner dentro).
+    // 3) Pronto, ma non prima che l'animazione si sia vista: se il lavoro è finito in
+    //    300 ms, qui si aspetta il resto del minimo; se ha impiegato di più, non si
+    //    aspetta niente.
+    await minimo;
+    if (!mounted) return;
     setState(() => _pronto = true);
   }
 

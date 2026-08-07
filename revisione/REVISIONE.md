@@ -45,11 +45,10 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
 - [ ] 🟠 **B5 — `_mostraSelezionato` usa `getVisibleRegion` senza inset.** La regione
   visibile non considera il foglio: un punto "sotto il foglio" è ritenuto visibile, quindi
   la mappa può non ricentrarsi quando dovrebbe. Coordinare con `_centroVisibile`.
-- [ ] 🟠 **B9 — Il marcatore "migliore" e la scheda del foglio possono indicare impianti
-  diversi.** `_aggiornaSorgente` calcola `idMigliore` su `marcatoriProvider` (tutta la
-  provincia, senza raggio), mentre il foglio mostra `elenco.first` da `elencoProvider`
-  (filtrato per raggio). Con raggio 10 km la pillola menta può stare su un impianto a 40 km
-  mentre la scheda ne mostra un altro.
+- [x] 🟠 **B9 — Marcatore "migliore" e scheda del foglio discordi.** `idMigliore` ora esce
+  dallo stesso `elencoProvider` che alimenta la scheda, con ripiego sull'intera provincia
+  se il raggio non lascia nulla. Aggiunto un `listen` su `elencoProvider`, perché al
+  cambio di raggio i marcatori non si muovono ma il migliore sì.
 - [ ] 🟡 **B4 — `_centroVisibile` approssima la densità pixel.** Formula Web Mercator su
   pixel logici senza `devicePixelRatio`: centramento "quasi" corretto.
 - [ ] 🟡 **B6 — `filtra` esclude gli impianti con `comunicatoIl == null`** quando
@@ -83,30 +82,36 @@ Aggiornare gli stati man mano che si correggono: è la fonte di verità della re
   su dati di due giorni prima. Ora entrambe le forme sono accettate, il ripiego è
   dichiarato (`data_dato_letta` + avviso su stderr) e la soglia di età è tarata a 48 h
   sulle misure della fonte. Test in `tests/test_parsing.py`.
-- [ ] 🟠 **E1 — «Media di zona» instabile.** Il risparmio (e il colore rame) si calcolano
-  sulla media dell'elenco **filtrato** per raggio ed età, non su una media provinciale
-  stabile: cambiando il raggio cambia il «risparmi X €» e quali chip diventano rame.
-  Andrebbe ancorata a una media provinciale calcolata dalla pipeline.
-- [ ] 🟠 **E2 — Distanza in linea d'aria, non stradale.** Diverge dai km di Apple/Google
-  Maps. Minimo: etichettare «in linea d'aria».
+- [x] 🟠 **E1 — «Media di zona» instabile.** La media è ora **provinciale** e la calcola
+  la pipeline (`build._medie_provinciali` → campo `medie` nel file di provincia), come
+  già dichiarava `config.yaml` (`risparmio.confronto: provincia`). L'app la legge da lì
+  (`mediaRiferimentoProvider`) e ripiega sulla media dell'elenco solo per i file salvati
+  prima che il campo esistesse. Il «risparmi X €» non si muove più col raggio.
+- [x] 🟠 **E2 — Distanza in linea d'aria.** Ora la scheda lo dichiara: «a 4,2 km in linea
+  d'aria». La distanza stradale resta Fase 5 (serve un servizio di percorsi).
 - [ ] 🟡 **E3 — «al netto della deviazione» non implementato.** Il risparmio è lordo
   (`deviazioneEuro` = 0, «da definire»).
 - [ ] 🟡 **E4 — Orari OSM a copertura parziale** (dichiarato). Nessuna azione.
 
 ## F · Accessibilità
 
-- [ ] 🟠 **F1 — Nessun `Semantics` per i prezzi.** Il PDF (pag. 13) chiede la lettura
-  vocale «2,059 euro al litro»: oggi lo screen reader legge «2,059 €/l» come glifi. Serve
-  su `PrezzoText`, sui chip e sulle righe. Voce della checklist di rilascio.
-- [ ] 🟡 **F2 — Contrasto AA non verificato.** Grafite su vetro chiaro: da misurare.
+- [x] 🟠 **F1 — `Semantics` per i prezzi.** `prezzoParlato()` in `domain/formato.dart`
+  produce «2,059 euro al litro»; applicato a `PrezzoText`, `PastigliaRisparmio`,
+  `ChipAlternativa` e alle righe del foglio, con `excludeSemantics` per non far leggere
+  due volte gli stessi glifi. **Restano fuori i marcatori sulla mappa**: li disegna
+  MapLibre come layer nativo, non sono widget Flutter e non espongono semantica.
+- [x] 🟡 **F2 — Contrasto AA misurato.** Tutte le combinazioni reali della palette.
+  Passavano inchiostro (17,6:1), bianco su inchiostro (18,2:1) e bianco su menta scura
+  (4,9:1); **non passavano** grafite (3,39), rame (3,96) e menta scura sulla pastiglia
+  (4,40). I tre colori sono stati scuriti del minimo necessario — `#646F78`, `#B15835`,
+  `#007D6D` — mantenendo la tinta. Deviazione dal PDF dichiarata in `02-design-tokens.md`.
 
 ## G · Avvio
 
-- [ ] 🟠 **G4 — Attesa fissa di 4 s all'avvio.** `main.dart` mostra la schermata di
-  caricamento per 4.000 ms prima ancora di iniziare i permessi, contro l'obiettivo
-  dichiarato «< 1 s dal tocco sull'icona al primo prezzo utile»
-  (`06-architettura.md`, `09-checklist-rilascio.md`). Decidere: o si accorcia, o si
-  aggiorna l'obiettivo dichiarandone la ragione.
+- [x] 🟠 **G4 — Attesa fissa di 4 s all'avvio.** L'attesa era **in fila** col lavoro:
+  l'avvio costava 4 s *più* posizione e dati. Ora il minimo di visibilità
+  (`_minimoVisibile`, 1,5 s) parte insieme al lavoro e si aspetta solo l'eventuale
+  residuo. Da misurare su device se si avvicina all'obiettivo di 1 s.
 
 ## H · Test
 
@@ -194,12 +199,15 @@ oltre i 16 ms (8 ms a 120 Hz). In debug, `P` attiva l'overlay prestazioni.
 
 ## Priorità suggerite
 
-1. **B9** — marcatore migliore e scheda che indicano impianti diversi: è una bugia visibile.
-2. **E1 / E2** — media di zona stabile ed etichetta «in linea d'aria».
-3. **F1** — accessibilità dei prezzi: è anche una voce della checklist di rilascio.
-4. **G4** — i 4 s di avvio contro l'obiettivo di 1 s.
-5. **H2** — test dipendenti dall'orologio: hanno già fatto saltare una pubblicazione.
-6. **A4 / J4** — logica in `domain/`, foglio base condiviso.
-7. **B3 / B5** — verifiche runtime sul foglio e sul ricentraggio.
+1. **H2** — test dipendenti dall'orologio: hanno già fatto saltare una pubblicazione.
+2. **A4 / J4** — logica di dominio fuori dai provider, foglio base condiviso.
+3. **B3 / B5** — verifiche runtime sul foglio e sul ricentraggio.
+4. **D2 / L5** — memoizzare elenco e marcatori, evitare di riserializzare l'intera
+   provincia a ogni cambio di carburante.
+5. **K5 / K7** — colori hardcoded e stringhe UI nei token e in un file di stringhe.
+
+Fuori dal codice, e più importante di tutto quanto sopra: **l'audit sul campo su 100
+impianti**, l'unica cosa che può riempire la misura «scarto mediano < 0,01 €/l», oggi
+«da definire» nel report.
 
 **Quick win a basso rischio:** L6 (`const`), A2 (import), J8 (record).

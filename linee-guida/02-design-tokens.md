@@ -7,14 +7,16 @@ Colore, tipografia, forma (pagina 4 del documento di progetto). I valori numeric
 | Nome | Valore | Uso |
 | --- | --- | --- |
 | Inchiostro | `#0E1620` | testo principale, filtro attivo, voce selezionata |
-| Grafite | `#77848F` | testo secondario, valori nelle impostazioni |
+| Grafite | `#646F78` | testo secondario, valori nelle impostazioni |
 | Menta (gradiente) | `#00C2A6 → #00887E`, 135° | azione primaria, marcatore migliore, interruttori attivi |
-| Menta scura | `#00806F` | testo del risparmio e azioni testuali |
+| Menta scura | `#007D6D` | testo del risparmio e azioni testuali |
 | Menta velo | `rgba(0,179,154,.10)` | sfondo pastiglia risparmio |
-| Rame | `#C0603A` | solo prezzi sopra la media di zona |
+| Rame | `#B15835` | solo prezzi sopra la media di zona |
 | Blu posizione | `#2F6BFF` | solo il puntino "sono qui" |
 | Fondo | `#EDF2F3` · `#E7EDEE` mappa | fondo delle schermate |
 | Vetro | bianco 72% · bordo bianco 85% | schede, pillole, gruppi, foglio |
+
+*Tre valori scostano dal documento di progetto: **grafite** (era `#77848F`), **menta scura** (`#00806F`) e **rame** (`#C0603A`). Misurati sui fondi su cui vengono davvero usati davano 3,39 · 4,40 · 3,96 contro il 4,5:1 richiesto dal contrasto AA, che è una voce obbligatoria della checklist di rilascio. Sono stati scuriti del minimo necessario a superarla — 16%, 2% e 8% — mantenendo la tinta: l'accessibilità vince sull'esattezza del PDF. Verifica in `revisione/REVISIONE.md → F2`.*
 
 ## Aurore di fondo
 

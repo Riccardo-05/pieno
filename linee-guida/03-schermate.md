@@ -24,9 +24,9 @@ Le quattro schermate: misure e comportamenti (pagine 5–8 del documento di prog
 ## Schermata 3 — Vicino a te
 
 1. **Riga di contesto.** Luogo e data del dato a sinistra. A destra la pillola del carburante e il pulsante impostazioni: due comandi, mai di più. Margini 22 px.
-2. **Scheda principale.** Vetro bianco 72%, raggio 36 px, margine laterale 18 px. Contiene sempre e solo: nome, via, distanza, prezzo, risparmio, azione.
+2. **Scheda principale.** Vetro bianco 72%, raggio 36 px, margine laterale 18 px. Contiene sempre e solo: nome, via, distanza, prezzo, risparmio, azione. La distanza è dichiarata **«in linea d'aria»**: è calcolata sulle coordinate e diverge dai km che il navigatore mostrerà un istante dopo. Il valore stradale arriverà solo con un servizio di percorsi (Fase 5).
 3. **Prezzo.** Sora 300, 78 px, cifre tabulari. Interi in peso 300, decimali in 500: il numero resta leggero ma i millesimi si distinguono.
-4. **Pastiglia risparmio.** Menta al 10%, testo menta scura. Dichiara sempre la base: «sul pieno» (50 litri). Sotto 0,50 € sparisce invece di mostrare cifre irrilevanti.
+4. **Pastiglia risparmio.** Menta al 10%, testo menta scura. Dichiara sempre la base: «sul pieno» (capacità impostata, 50 litri di default). Il confronto è con la **media provinciale** calcolata dalla pipeline, non con la media dell'elenco a schermo: così il risparmio non cambia quando l'utente muove il raggio di ricerca. Sotto 0,50 € sparisce invece di mostrare cifre irrilevanti.
 5. **Azione primaria.** Altezza 74 px, raggio 26 px, gradiente menta. Apre il navigatore scelto nelle impostazioni con le coordinate dell'impianto.
 6. **Alternative.** Fino a cinque chip in vetro 50%, raggio 24 px (il documento di progetto ne indicava tre: vedi `01-principi-ux.md`). Prezzo a destra in Sora 400; rame solo se sopra la media di zona. Il chip è **toccabile**: seleziona l'impianto e porta alla Mappa, che lo mostra già scelto e centrato (selezione condivisa, pag. 3). Il chip selezionato si distingue come la riga attiva nel foglio della mappa: vetro pieno velato d'inchiostro e nome in grassetto.
 7. **Switch flottante.** Due sole destinazioni, selettore in inchiostro, staccato 30 px dal bordo inferiore. Stesso componente della schermata di accesso.

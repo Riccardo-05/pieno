@@ -71,14 +71,28 @@ class ChipAlternativa extends StatelessWidget {
       ),
     );
 
-    if (onTap == null) return chip;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap!();
-      },
-      child: chip,
+    // Un'unica etichetta al posto di «nome» + «1,899» letti come glifi separati.
+    final nome = impianto.nome.isNotEmpty ? impianto.nome : impianto.marchio;
+    final etichetta = '$nome, ${prezzoParlato(prezzo.valore)}'
+        '${rame ? ', sopra la media di zona' : ''}';
+
+    if (onTap == null) {
+      return Semantics(label: etichetta, excludeSemantics: true, child: chip);
+    }
+    return Semantics(
+      label: etichetta,
+      button: true,
+      selected: selezionato,
+      hint: 'apre questo impianto sulla mappa',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        child: chip,
+      ),
     );
   }
 }

@@ -9,12 +9,16 @@ class PienoColors {
   PienoColors._();
 
   static const inchiostro = Color(0xFF0E1620); // testo principale, filtro attivo, voce selezionata
-  static const grafite = Color(0xFF77848F); // testo secondario, valori impostazioni
+  // Grafite, menta scura e rame sono stati scuriti rispetto al documento di progetto
+  // (#77848F, #00806F, #C0603A) del minimo necessario a superare il contrasto AA 4,5:1
+  // sui fondi su cui vengono davvero usati: erano a 3,39, 4,40 e 3,96. È una voce
+  // obbligatoria della checklist di rilascio, quindi vince sull'esattezza del PDF.
+  static const grafite = Color(0xFF646F78); // testo secondario, valori impostazioni
   static const mentaChiara = Color(0xFF00C2A6); // inizio gradiente azione primaria
   static const mentaScuraGrad = Color(0xFF00887E); // fine gradiente azione primaria
-  static const mentaScura = Color(0xFF00806F); // testo risparmio e azioni testuali
+  static const mentaScura = Color(0xFF007D6D); // testo risparmio e azioni testuali
   static const mentaVelo = Color(0x1A00B39A); // rgba(0,179,154,.10) sfondo pastiglia risparmio
-  static const rame = Color(0xFFC0603A); // solo prezzi sopra la media di zona
+  static const rame = Color(0xFFB15835); // solo prezzi sopra la media di zona
   static const bluPosizione = Color(0xFF2F6BFF); // solo il puntino "sono qui"
   static const fondo = Color(0xFFEDF2F3); // fondo schermate
   static const fondoMappa = Color(0xFFE7EDEE); // fondo mappa / terra

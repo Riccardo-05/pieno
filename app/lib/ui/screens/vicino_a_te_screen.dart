@@ -122,7 +122,7 @@ class VicinoATeScreen extends ConsumerWidget {
 
   Widget _elenco(BuildContext context, WidgetRef ref, List<Impianto> ordinati, Carburante c,
       Posizione? pos, Navigatore nav, int capacita) {
-    final media = mediaZona(ordinati, c);
+    final media = ref.watch(mediaRiferimentoProvider);
     final selezionato = ref.watch(selezionatoProvider);
     final migliore = ordinati.first;
     final prezzoMigliore = migliore.prezzoDi(c)!.valore;

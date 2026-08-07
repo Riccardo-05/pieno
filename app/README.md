@@ -38,8 +38,8 @@ scaricare nulla.
 - **`kBaseUrlDati`** in `lib/state/app_state.dart` — URL della build dati pubblica.
   In sviluppo si può servire `data-pipeline/build/public/` con `python -m http.server`
   e puntare la costante lì.
-- **Bundle id** — ancora `com.example.pieno`: da cambiare prima della pubblicazione
-  (`android/app/build.gradle.kts`, target iOS in Xcode).
+- **Bundle id** — `io.github.riccardo05.pieno` (Android `namespace` e `applicationId`,
+  target iOS, package Kotlin). Versione `1.0.0+1`.
 
 ## Posizione
 
@@ -76,4 +76,6 @@ Sulla giuntura fra i due pezzi vivono due regole scritte apposta:
 - Sincronizzazione di preferiti e preferenze (richiede il backend account).
 - Invio delle segnalazioni: oggi restano in coda locale.
 - Scelta definitiva dell'archivio locale (Drift/Isar) al posto della cache su file.
-- Accessibilità: nessun `Semantics` sui prezzi (lettura vocale «2,059 euro al litro»).
+- Testo dinamico: mai verificato con i corpi di sistema ingranditi.
+- Semantica dei **marcatori sulla mappa**: li disegna MapLibre come layer nativo, quindi
+  non sono raggiungibili dallo screen reader. I prezzi nei widget sì (`prezzoParlato`).

@@ -5,6 +5,7 @@
 import 'package:flutter/widgets.dart';
 import '../../design/typography.dart';
 import '../../design/tokens.dart';
+import '../../domain/formato.dart';
 
 class PrezzoText extends StatelessWidget {
   const PrezzoText(this.valore, {super.key, this.mostraUnita = true});
@@ -17,6 +18,16 @@ class PrezzoText extends StatelessWidget {
     final parti = valore.toStringAsFixed(3).split('.'); // tre decimali
     final interi = parti[0];
     final decimali = parti.length > 1 ? parti[1] : '000';
+    // Il numero è composto da pezzi con pesi diversi e l'unità è un widget a parte: letto
+    // così a voce diventa una sequenza di glifi. Un'unica etichetta lo sostituisce.
+    return Semantics(
+      label: prezzoParlato(valore),
+      excludeSemantics: true,
+      child: _numero(interi, decimali),
+    );
+  }
+
+  Widget _numero(String interi, String decimali) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,

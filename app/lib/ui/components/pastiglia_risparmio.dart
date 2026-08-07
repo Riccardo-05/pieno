@@ -3,6 +3,7 @@
 
 import 'package:flutter/widgets.dart';
 import '../../design/tokens.dart';
+import '../../domain/formato.dart';
 import '../../domain/risparmio.dart';
 
 class PastigliaRisparmio extends StatelessWidget {
@@ -13,7 +14,15 @@ class PastigliaRisparmio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!risparmioDaMostrare(risparmioEuro)) return const SizedBox.shrink();
-    final testo = 'Risparmi ${risparmioEuro.toStringAsFixed(2).replaceAll('.', ',')} € sul pieno';
+    final testo = 'Risparmi ${formattaEuro(risparmioEuro)} € sul pieno';
+    return Semantics(
+      label: 'Risparmi ${formattaEuro(risparmioEuro)} euro sul pieno',
+      excludeSemantics: true,
+      child: _pastiglia(testo),
+    );
+  }
+
+  Widget _pastiglia(String testo) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(

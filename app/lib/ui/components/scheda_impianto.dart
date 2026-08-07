@@ -37,9 +37,12 @@ class SchedaImpianto extends StatelessWidget {
   Widget build(BuildContext context) {
     final prezzo = impianto.prezzoDi(carburante)!;
     final via = [impianto.indirizzo, impianto.comune].where((s) => s.isNotEmpty).join(' · ');
+    // «in linea d'aria» non è pedanteria: la distanza è calcolata sulle coordinate, non
+    // sulle strade, quindi diverge dai km che mostrerà il navigatore un istante dopo. Il
+    // valore stradale arriverà solo con un servizio di percorsi (Fase 5).
     final dist = distanzaKm == null
         ? null
-        : 'a ${distanzaKm!.toStringAsFixed(1).replaceAll('.', ',')} km';
+        : 'a ${distanzaKm!.toStringAsFixed(1).replaceAll('.', ',')} km in linea d\'aria';
 
     return Vetro(
       radius: PienoRadii.schedaPrincipale,

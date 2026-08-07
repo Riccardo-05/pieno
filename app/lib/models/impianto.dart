@@ -81,12 +81,18 @@ class DatiProvincia {
   final String attribuzione;
   final List<Impianto> impianti;
 
+  /// Prezzo medio della provincia per carburante, calcolato dalla pipeline. È il termine
+  /// di paragone del risparmio: essendo provinciale non cambia quando l'utente muove il
+  /// raggio di ricerca. Vuoto sui file salvati prima che il campo esistesse.
+  final Map<Carburante, double> medie;
+
   const DatiProvincia({
     required this.versione,
     required this.datoDel,
     required this.provincia,
     required this.attribuzione,
     required this.impianti,
+    this.medie = const {},
   });
 
   factory DatiProvincia.fromJson(Map<String, dynamic> j) => DatiProvincia(
@@ -94,6 +100,9 @@ class DatiProvincia {
         datoDel: j['dato_del'] != null ? DateTime.tryParse(j['dato_del'] as String) : null,
         provincia: j['provincia'] as String? ?? '',
         attribuzione: j['attribuzione'] as String? ?? '',
+        medie: ((j['medie'] as Map?) ?? const {}).map(
+          (k, v) => MapEntry(Carburante.daChiave(k as String), (v as num).toDouble()),
+        ),
         impianti: ((j['impianti'] as List?) ?? [])
             .map((e) => Impianto.fromJson(e as Map<String, dynamic>))
             .toList(),

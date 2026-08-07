@@ -17,6 +17,7 @@ const _json = '''
   "dato_del": "2026-08-05T08:00:00",
   "provincia": "MI",
   "attribuzione": "Dati: MIMIT — IODL 2.0. © OpenStreetMap contributors.",
+  "medie": {"benzina": 1.844, "gasolio": 1.749},
   "impianti": [
     {"id":"1001","n":"Eni Stazione Centrale","v":"Via Roma 1","c":"Milano","m":"Eni",
      "lat":45.464,"lon":9.19,
@@ -47,6 +48,20 @@ void main() {
     final ordinati =
         ordina(dati.impianti, Carburante.benzina, Ordinamento.prezzo, null);
     expect(ordinati.first.id, '1002'); // 1,829 < 1,859
+  });
+
+  test('le medie provinciali della pipeline vengono lette', () {
+    // Sono il termine di paragone del risparmio: se non arrivano, l'app ripiega sulla
+    // media dell'elenco filtrato e il «risparmi X €» torna a muoversi col raggio.
+    final dati = DatiProvincia.fromJson(jsonDecode(_json) as Map<String, dynamic>);
+    expect(dati.medie[Carburante.benzina], 1.844);
+    expect(dati.medie[Carburante.gasolio], 1.749);
+    expect(dati.medie[Carburante.gpl], isNull);
+  });
+
+  test('un file salvato prima delle medie non fa crollare nulla', () {
+    final vecchio = jsonDecode(_json) as Map<String, dynamic>..remove('medie');
+    expect(DatiProvincia.fromJson(vecchio).medie, isEmpty);
   });
 
   test('le quattro chiavi carburante combaciano con la pipeline', () {

@@ -316,11 +316,17 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       await c.setGeoJsonSource(_sorgente, {'type': 'FeatureCollection', 'features': []});
       return;
     }
-    // Il marcatore "migliore" (pillola menta) è il primo secondo il criterio scelto
-    // (prezzo, bilanciato o distanza): così la mappa reagisce al cambio di ordinamento.
+    // Il marcatore "migliore" (pillola menta) è il primo dell'ELENCO, non dell'intera
+    // provincia: l'elenco è filtrato per raggio, ed è quello che alimenta la scheda del
+    // foglio. Prendendolo dai marcatori — che il raggio non lo applicano — la pillola
+    // menta poteva finire su un impianto a 40 km mentre la scheda ne mostrava un altro:
+    // due risposte diverse alla stessa domanda, nella stessa schermata.
+    // Se il raggio non lascia nulla, si ricade sull'intera provincia: meglio un migliore
+    // lontano che nessuno.
+    final elenco = ref.read(elencoProvider);
     final ord = ref.read(ordinamentoProvider);
     final pos = ref.read(posizioneProvider).valueOrNull;
-    final ordinati = ordina(marcatori, carburante, ord, pos);
+    final ordinati = elenco.isNotEmpty ? elenco : ordina(marcatori, carburante, ord, pos);
     final geo = geoJsonPrezzi(marcatori, carburante, idMigliore: ordinati.first.id);
     await c.setGeoJsonSource(_sorgente, geo);
 
@@ -465,7 +471,10 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       _aggiornaSorgente();
       _aggiornaSelezione();
     });
-    ref.listen(ordinamentoProvider, (_, __) => _aggiornaSorgente());
+    // L'elenco decide quale marcatore è "il migliore" (vedi _aggiornaSorgente): va
+    // riascoltato anche quando cambia solo il raggio o l'ordinamento, che i marcatori non
+    // toccano. È un listen, non un watch: non ricostruisce la mappa.
+    ref.listen(elencoProvider, (_, __) => _aggiornaSorgente());
     ref.listen(selezionatoProvider, (_, id) {
       _aggiornaSelezione(); // leggero: aggiorna solo la sorgente della selezione
       _mostraSelezionato(id);
@@ -809,7 +818,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       );
     }
 
-    final media = mediaZona(elenco, carburante);
+    final media = ref.watch(mediaRiferimentoProvider);
     final selezionato = _trova(elenco, selId) ?? elenco.first;
     final prezzoSel = selezionato.prezzoDi(carburante)!.valore;
     final risparmio =
@@ -869,6 +878,19 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   Widget _riga(Impianto i, Carburante carburante, double? media, bool attivo) {
     final prezzo = i.prezzoDi(carburante)!;
     final rame = sopraLaMedia(i, carburante, media);
+    final nome = i.nome.isNotEmpty ? i.nome : i.marchio;
+    return Semantics(
+      label: '$nome, ${prezzoParlato(prezzo.valore)}'
+          '${rame ? ', sopra la media di zona' : ''}',
+      button: true,
+      selected: attivo,
+      excludeSemantics: true,
+      child: _corpoRiga(i, prezzo, nome, rame, attivo),
+    );
+  }
+
+  Widget _corpoRiga(
+      Impianto i, Prezzo prezzo, String nome, bool rame, bool attivo) {
     return InkWell(
       onTap: () => ref.read(selezionatoProvider.notifier).state = i.id,
       child: Container(
@@ -886,7 +908,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
           children: [
             Expanded(
               child: Text(
-                i.nome.isNotEmpty ? i.nome : i.marchio,
+                nome,
                 style: attivo
                     ? PienoText.voceImpostazione.copyWith(fontWeight: FontWeight.w700)
                     : PienoText.voceImpostazione,
