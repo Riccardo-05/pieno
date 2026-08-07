@@ -83,15 +83,24 @@ Ognuna si chiude con qualcosa di verificabile. Non si passa alla successiva prim
 | --- | --- | --- |
 | 1 · Motore | ✅ conclusa | Grafo italiano MLD nel volume Docker `pieno-osrm`. Matrice verso 50 destinazioni in **16–33 ms** (obiettivo < 200 ms). Numeri in [`../percorsi/README.md`](../percorsi/README.md). |
 | 2 · API | ✅ conclusa | Servizio Go in [`../percorsi/`](../percorsi). Le tre rotte rispondono su dati veri; la cache porta la stessa richiesta da 23,7 ms a 1,5–3,7 ms. |
-| 3 · Esposizione | ⏸ **in attesa del dominio** | `cloudflared` installato, procedura scritta nel README del servizio. Serve una zona Cloudflare: è l'unico passo che richiede una spesa e un account, e resta a chi possiede il progetto. |
+| 3 · Esposizione | ✅ conclusa | `https://percorsi.pienocarburanti.com/v1/salute` risponde da fuori con certificato valido; `/route` e `/table` danno 404, il motore non è esposto. Nessuna porta aperta sul modem. |
 | 4 · L'app parla all'API | ✅ conclusa | `app/lib/data/percorsi_repository.dart` dietro interfaccia, tetto di 2 s, ripiego dichiarato, cache a 300 m, nessun tentativo ripetuto a vuoto. |
 | 5 · Fattori stradali | ✅ conclusa | `percorsi/cmd/fattori` calcola il rapporto mediano; la pipeline lo incorpora come `fs` (`--fattori`); l'app lo usa nella stima. |
 | 6 · Risparmio netto | ✅ conclusa | `costoDeviazione()` e la voce «Consumo medio» nel gruppo Rifornimento. Il risparmio mostrato è netto quando le distanze sono reali. |
 
-La Fase 3 è ferma per una ragione dichiarata, non per una dimenticanza: **senza dominio non
-c'è tunnel**. Fino ad allora l'app non contatta nulla e resta sulla stima, dicendolo — che è
-lo stesso comportamento previsto per le sei ore di spegnimento, quindi non è una strada mai
-percorsa: è quella che si percorre un quarto delle giornate.
+Tutte e sei le fasi sono chiuse. Resta da vedere l'app sull'iPhone con le distanze vere:
+la procedura è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md), parte 3.
+
+Due cose che l'ambiente ha imposto e che il piano non prevedeva, entrambe scritte nei passi
+perché il sintomo non porta da nessuna parte se non si sa dove guardare:
+
+- **Windows si riprende la porta 5000.** Hyper-V ricalcola a ogni accensione gli intervalli
+  riservati, e la 5000 può finirci dentro: il container risulta `Up` ma senza pubblicazione,
+  e l'API risponde «degradato» con Docker perfettamente acceso. Si risolve riservando la
+  porta in modo permanente.
+- **`cloudflared service install` registra il servizio senza dirgli cosa eseguire**, quando
+  il tunnel è gestito localmente con `config.yml`. Il servizio muore all'istante e va
+  corretto indicandogli `tunnel run`.
 
 ### Fase 1 · Il motore, solo in casa
 

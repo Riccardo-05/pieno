@@ -153,24 +153,45 @@ deve comparire `Amministratore:`.
 
 ```powershell
 cloudflared service install
-Get-Service cloudflared
 ```
 
-Devi vedere `Status: Running` e `StartType: Automatic`.
+**17.** Il servizio installato così **non parte**, e non è sfortuna: `cloudflared service
+install` registra il servizio nudo, senza dirgli cosa eseguire. Lo si vede nel registro
+eventi — `Cloudflared service arguments: [cloudflared.exe]`, senza `tunnel run` — e il
+servizio muore all'istante con `exitCode 1067`. Succede quando il tunnel è **gestito
+localmente** con `config.yml`, invece che con un token preso dal pannello.
 
-**17.** Riapri nel browser `https://percorsi.pienocarburanti.com/v1/salute`.
-
-Se **non** risponde più, il servizio gira con l'account di sistema e cerca la configurazione
-in un'altra cartella. Rimedio, sempre in PowerShell amministratore:
+Servono due cose. Primo, la configurazione dove la cerca l'account di sistema:
 
 ```powershell
 $d = "C:\Windows\System32\config\systemprofile\.cloudflared"
 New-Item -ItemType Directory -Force -Path $d
-Copy-Item "$env:USERPROFILE\.cloudflared\*" $d -Force
-Restart-Service cloudflared
+Copy-Item "$env:USERPROFILE\.cloudflared\config.yml" $d -Force
+Copy-Item "$env:USERPROFILE\.cloudflared\cert.pem" $d -Force
+Copy-Item "$env:USERPROFILE\.cloudflared\41bcf1b4-0bdb-4be4-977d-a5967363a475.json" $d -Force
 ```
 
-Poi riprova.
+Secondo, dire al servizio quale comando eseguire. **Una riga alla volta**: se il testo si
+spezza incollandolo, nel registro finisce un a capo e il servizio non parte più.
+
+```powershell
+$p = "HKLM:\SYSTEM\CurrentControlSet\Services\Cloudflared"
+$e = '"C:\Program Files (x86)\cloudflared\cloudflared.exe"'
+$c = '"C:\Windows\System32\config\systemprofile\.cloudflared\config.yml"'
+$img = "$e --config $c tunnel run pieno-percorsi"
+Set-ItemProperty -Path $p -Name ImagePath -Value $img
+Start-Service cloudflared
+Get-Service cloudflared
+```
+
+Devi vedere `Running` e `StartType: Automatic`.
+
+> Se il servizio resta bloccato su `StopPending`, cloudflared non sta chiudendo le sue
+> connessioni. Si termina a forza: `Get-CimInstance Win32_Service -Filter "Name='Cloudflared'"`
+> per il PID, poi `Stop-Process -Id <PID> -Force`, aspetta dieci secondi e `Start-Service`.
+
+Poi apri nel browser `https://percorsi.pienocarburanti.com/v1/salute`: deve rispondere
+`{"stato":"su",...}` con il lucchetto.
 
 ## Le tre verifiche finali
 
