@@ -3,9 +3,23 @@
 // "Mappa / Vicino a te" e "Accedi / Registrati" (stesso componente).
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import 'vetro.dart';
+
+/// Altezza complessiva della pillola: cella + padding del vetro + il suo bordo da 1 px.
+const double kAltezzaSwitchPillola = PienoSizes.targetMinimo + 2;
+
+/// Distacco dello switch flottante dal bordo inferiore, oltre la safe area. È lo stesso
+/// in tutte le viste: lo switch non è navigazione (pag. 3) e non deve spostarsi a seconda
+/// di ciò che ha sotto.
+const double kMargineSwitchFlottante = 16;
+
+/// Spazio da riservare in coda a un contenuto scorrevole perché la sua ultima riga non
+/// finisca sotto lo switch. Va sommato alla safe area inferiore.
+const double kSpazioSwitchFlottante =
+    kAltezzaSwitchPillola + kMargineSwitchFlottante + 12;
 
 class SwitchPillola extends StatelessWidget {
   const SwitchPillola({
@@ -52,7 +66,10 @@ class SwitchPillola extends StatelessWidget {
                       Expanded(
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => onCambia(i),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            onCambia(i);
+                          },
                           child: Center(
                             child: Text(
                               opzioni[i],

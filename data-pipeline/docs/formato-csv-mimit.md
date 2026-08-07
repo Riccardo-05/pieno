@@ -41,11 +41,13 @@ Configurate in `config.yaml → sorgenti`. Open data MIMIT, licenza **IODL 2.0**
 | `idImpianto` | collega all'anagrafica |
 | `descCarburante` | mappato sulle 4 chiavi canoniche (`benzina`, `gasolio`, `gpl`, `metano`) |
 | `prezzo` | `Prezzo.valore` (€/l, tre decimali; virgola o punto accettati) |
-| `isSelf` | `Prezzo.self_service` (si preferisce il self, è il prezzo mostrato) |
+| `isSelf` | **filtro**: le righe «servito» vengono scartate del tutto, si pubblicano solo i prezzi self (vedi sotto) |
 | `dtComu` | `Prezzo.comunicato_il` (età del dato → regola R5) |
 
 ## Note di normalizzazione
 
+- **Solo self:** in `parsing.applica_prezzi` le righe con `isSelf` falso vengono ignorate, non tenute come ripiego. I prezzi mostrati sono quindi puliti, senza il sovrapprezzo del servito; se per un carburante esiste **solo** il prezzo servito, quel carburante non compare. Conseguenza: nel record pubblicato il campo `s` è sempre `true` ed è dato morto (voce K8 della revisione).
+- **Orari di apertura:** non sono nel CSV — `isSelf` distingue self/servito, non le ore. Vengono aggiunti da OpenStreetMap in `orari.py`, dopo la validazione (vedi il README della pipeline).
 - **Carburanti:** `descCarburante` contiene varianti commerciali (es. «Blue Diesel», «Hi-Q Diesel», «Benzina 98»). Vengono ricondotte alle 4 chiavi canoniche; le voci non riconducibili sono ignorate. Vedi `normalizza_carburante`.
 - **Marchi (bandiera):** normalizzati a minuscolo/spazi singoli. Gli **alias di bandiera** (stesso marchio scritto in modi diversi) sono **da definire** con l'anagrafica reale.
 - **Confini comunali (regola R1):** richiedono i poligoni **ISTAT** — sorgente **da definire** in `config.yaml`. Finché non collegata, R1 è riportata come «non verificata» nel report, non simulata.

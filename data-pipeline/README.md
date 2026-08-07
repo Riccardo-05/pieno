@@ -9,8 +9,19 @@ Catena di lavorazione (linee-guida/05-dati-e-qualita.md):
 
 ```
 scarico → analisi → validazione → normalizzazione marchi →
-controllo geografico → deduplica → storico → pubblicazione atomica
+controllo geografico → deduplica → storico → arricchimento orari → pubblicazione atomica
 ```
+
+| Modulo | Ruolo |
+| --- | --- |
+| `sources.py` | scarico dei CSV e rilettura dell'ultima build (storico per R4) |
+| `parsing.py` | codifica/separatore, mappatura nel modello, **solo prezzi self** |
+| `validation.py` | le sei regole di pag. 12 (la settima è «da definire») |
+| `geo.py` | distanze, coordinate invertite, confini comunali (R1, non collegata) |
+| `orari.py` | orari di apertura da OpenStreetMap, abbinati per vicinanza |
+| `report.py` | misure di controllo e **esito della pubblicazione** |
+| `build.py` | file per provincia, manifest, scambio atomico |
+| `pipeline.py` | orchestrazione e CLI |
 
 ## Requisiti
 
@@ -56,6 +67,17 @@ scatterebbe mai.
 Il report dichiara sempre l'esito: `storico_disponibile` e `storico_impianti` nelle misure
 di controllo, più un avviso su stderr. Storico assente alla prima esecuzione è normale;
 dopo, significa che il recupero si è rotto.
+
+## Orari di apertura (OpenStreetMap)
+
+MIMIT non pubblica gli orari: `isSelf` distingue self e servito, non le ore. Dopo la
+validazione, `orari.py` interroga **Overpass** una volta per l'intera Italia, indicizza i
+distributori con `opening_hours` e li abbina per vicinanza. Il valore finisce nel campo
+`oh` del record; Aperto/Chiuso viene calcolato nell'app (`domain/orari.dart`).
+
+È **gratuito, best-effort e a copertura parziale**: se Overpass non risponde la build
+prosegue senza orari (nessun dato inventato: dove manca, l'app non mostra nulla). In CI
+l'istanza pubblica può andare in timeout — vedi `I1` in `revisione/REVISIONE.md`.
 
 ## Stato e limiti dichiarati
 

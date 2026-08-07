@@ -2,6 +2,7 @@
 // Schermata sovrapposta: si apre dai pulsanti impostazioni e si chiude tornando dove si era.
 // Cinque gruppi in vetro (raggio 22), righe alte 50, occhiello in grafite.
 
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,8 +21,9 @@ import 'segnala_sheet.dart';
 class ImpostazioniScreen extends ConsumerWidget {
   const ImpostazioniScreen({super.key});
 
+  // CupertinoPageRoute: transizione iOS con back-swipe dal bordo per tornare indietro.
   static Route<void> rotta() =>
-      MaterialPageRoute(builder: (_) => const ImpostazioniScreen());
+      CupertinoPageRoute(builder: (_) => const ImpostazioniScreen());
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -446,7 +448,7 @@ class _SceltaChip<T> extends StatelessWidget {
   }
 }
 
-class _RigaSlider extends StatelessWidget {
+class _RigaSlider extends StatefulWidget {
   const _RigaSlider({
     required this.titolo,
     required this.valore,
@@ -466,27 +468,41 @@ class _RigaSlider extends StatelessWidget {
   final ValueChanged<double> onChange;
 
   @override
+  State<_RigaSlider> createState() => _RigaSliderState();
+}
+
+class _RigaSliderState extends State<_RigaSlider> {
+  // Valore mostrato durante il trascinamento: il provider viene aggiornato solo a
+  // fine gesto (onChangeEnd), così filtra+ordina non gira a ogni tick (fluidità, L3).
+  double? _trascinamento;
+
+  @override
   Widget build(BuildContext context) {
+    final v = (_trascinamento ?? widget.valore).clamp(widget.min, widget.max);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text(titolo, style: PienoText.voceImpostazione)),
+          Expanded(flex: 3, child: Text(widget.titolo, style: PienoText.voceImpostazione)),
           Expanded(
             flex: 5,
             child: Slider(
-              value: valore.clamp(min, max),
-              min: min,
-              max: max,
-              divisions: divisioni,
+              value: v,
+              min: widget.min,
+              max: widget.max,
+              divisions: widget.divisioni,
               activeColor: PienoColors.mentaScura,
-              label: formato(valore),
-              onChanged: onChange,
+              label: widget.formato(v),
+              onChanged: (nuovo) => setState(() => _trascinamento = nuovo),
+              onChangeEnd: (nuovo) {
+                setState(() => _trascinamento = null);
+                widget.onChange(nuovo);
+              },
             ),
           ),
           SizedBox(
             width: 48,
-            child: Text(formato(valore),
+            child: Text(widget.formato(v),
                 textAlign: TextAlign.right, style: PienoText.valoreDettaglio),
           ),
         ],

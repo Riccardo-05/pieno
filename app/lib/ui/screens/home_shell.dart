@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/typography.dart';
+import '../../domain/formato.dart';
 import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
 import '../components/switch_pillola.dart';
 import 'mappa_screen.dart';
-import 'spiegazione_posizione.dart';
 import 'vicino_a_te_screen.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -24,20 +24,19 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
+  // Costruzione "in ordine di comparsa": all'avvio solo la Mappa (indice 0); Vicino a te
+  // si costruisce la prima volta che ci si passa, e poi resta viva nell'IndexedStack.
+  final Set<int> _visitati = {0};
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _avvio());
   }
 
-  /// Due cose all'apertura, in quest'ordine: la spiegazione della posizione al primo
-  /// avvio (mai il dialogo di sistema a freddo), poi l'eventuale domanda sul
-  /// rifornimento appena fatto. Mai i due fogli insieme.
+  /// All'apertura dell'app (i permessi sono già stati chiesti durante il caricamento):
+  /// se c'è un rifornimento in sospeso, chiede com'è andato.
   Future<void> _avvio() async {
-    if (ref.read(consensoPosizioneProvider) == null) {
-      await mostraSpiegazionePosizione(context);
-      if (!mounted) return;
-    }
     final r = ref.read(rientroProvider);
     if (r != null) await _chiediRientro(r);
   }
@@ -45,38 +44,40 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final vista = ref.watch(vistaProvider);
-    final nascondiSwitch = vista == Vista.mappa && ref.watch(foglioEspansoProvider);
+    final schermo = MediaQuery.of(context);
+    // Lo switch è lo stesso oggetto, nello stesso punto, in tutte e due le viste: non è
+    // navigazione (pag. 3), quindi non deve muoversi quando cambia ciò che ha sotto. Sulla
+    // Mappa galleggia sopra il foglio, che gli lascia spazio in coda alla lista e sfuma il
+    // contenuto sotto di lui (vedi mappa_screen: kSpazioSwitchFlottante).
+    final bottomSwitch = schermo.padding.bottom + kMargineSwitchFlottante;
 
     final indice = vista == Vista.mappa ? 0 : 1;
+    _visitati.add(indice); // la vista corrente è, per definizione, comparsa
     return Stack(
       children: [
         Positioned.fill(
           child: IndexedStack(
             index: indice,
-            children: const [MappaScreen(), VicinoATeScreen()],
+            children: [
+              _visitati.contains(0) ? const MappaScreen() : const SizedBox.shrink(),
+              _visitati.contains(1) ? const VicinoATeScreen() : const SizedBox.shrink(),
+            ],
           ),
         ),
         Positioned(
           left: 0,
           right: 0,
-          bottom: 30,
-          child: IgnorePointer(
-            ignoring: nascondiSwitch,
-            child: AnimatedOpacity(
-              opacity: nascondiSwitch ? 0 : 1,
-              duration: const Duration(milliseconds: 200),
-              child: Center(
-                child: SizedBox(
-                  width: 260,
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: SwitchPillola(
-                      opzioni: const ['Mappa', 'Vicino a te'],
-                      indiceSelezionato: vista == Vista.mappa ? 0 : 1,
-                      onCambia: (i) => ref.read(vistaProvider.notifier).state =
-                          i == 0 ? Vista.mappa : Vista.vicino,
-                    ),
-                  ),
+          bottom: bottomSwitch,
+          child: Center(
+            child: SizedBox(
+              width: 260,
+              child: Material(
+                type: MaterialType.transparency,
+                child: SwitchPillola(
+                  opzioni: const ['Mappa', 'Vicino a te'],
+                  indiceSelezionato: vista == Vista.mappa ? 0 : 1,
+                  onCambia: (i) => ref.read(vistaProvider.notifier).state =
+                      i == 0 ? Vista.mappa : Vista.vicino,
                 ),
               ),
             ),
@@ -88,7 +89,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   Future<void> _chiediRientro(Rientro r) async {
     if (!mounted) return;
-    final prezzo = r.prezzoMostrato.toStringAsFixed(3).replaceAll('.', ',');
+    final prezzo = formattaPrezzo(r.prezzoMostrato);
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

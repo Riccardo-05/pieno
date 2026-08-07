@@ -58,6 +58,10 @@ class Impianto:
     lon: Optional[float]
     prezzi: Dict[str, Prezzo] = field(default_factory=dict)
 
+    # Orari di apertura (formato OpenStreetMap `opening_hours`), quando abbinabili da OSM.
+    # Non presenti nei dati MIMIT: arricchimento parziale e best-effort.
+    orari: Optional[str] = None
+
     # Esito della validazione
     quarantena: bool = False
     scartato: bool = False

@@ -1,6 +1,7 @@
 // Pulsante tondo in vetro: 40 px (elenco) o 52 px (mappa) — pag. 3, 6.
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import '../../design/tokens.dart';
 import 'vetro.dart';
 
@@ -19,7 +20,10 @@ class PulsanteTondo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: SizedBox(
         width: diametro,
         height: diametro,

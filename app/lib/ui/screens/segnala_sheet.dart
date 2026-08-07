@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../domain/formato.dart';
 import '../../models/impianto.dart';
 import '../../models/segnalazione.dart';
 import '../../state/app_state.dart';
@@ -66,7 +67,7 @@ class _SegnalaFormState extends ConsumerState<_SegnalaForm> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFF7FAFB),
+          color: PienoColors.foglio,
           borderRadius: BorderRadius.vertical(top: Radius.circular(PienoRadii.schedaPrincipale)),
         ),
         padding: const EdgeInsets.all(20),
@@ -78,7 +79,7 @@ class _SegnalaFormState extends ConsumerState<_SegnalaForm> {
             const SizedBox(height: 8),
             Text(widget.impianto.nome, style: PienoText.nomeImpianto),
             Text(
-              'Prezzo mostrato: ${widget.prezzoMostrato.toStringAsFixed(3).replaceAll('.', ',')} €/l',
+              'Prezzo mostrato: ${formattaPrezzo(widget.prezzoMostrato)} €/l',
               style: PienoText.valoreDettaglio,
             ),
             const SizedBox(height: 16),

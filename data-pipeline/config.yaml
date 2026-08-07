@@ -18,6 +18,11 @@ sorgenti:
   confini_comunali:
     url: "da definire"                 # ISTAT limiti amministrativi comunali
     abilitato: false                   # finché non configurato, la regola 1 è "skip" e va a report
+  # Orari di apertura da OpenStreetMap (gratis, copertura parziale). Abbinati per vicinanza.
+  # Best-effort: se Overpass non risponde, gli orari restano assenti e la build procede.
+  osm_orari:
+    url: "https://overpass-api.de/api/interpreter"
+    abilitato: true
 
 # Carburanti canonici del progetto (forma canonica: linee-guida/05-dati-e-qualita.md).
 carburanti:

@@ -2,6 +2,7 @@
 // con selettore inchiostro. Riusato su Mappa, Vicino a te e nelle Impostazioni.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
@@ -32,7 +33,10 @@ class OrdinamentoShortcut extends ConsumerWidget {
             Tooltip(
               message: o.etichetta,
               child: GestureDetector(
-                onTap: () => ref.read(ordinamentoProvider.notifier).state = o,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(ordinamentoProvider.notifier).state = o;
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

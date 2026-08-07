@@ -10,7 +10,9 @@ from pieno_pipeline.geo import sembra_invertita, distanza_metri
 from pieno_pipeline.model import Impianto, Prezzo, normalizza_carburante
 from pieno_pipeline.validation import valida, normalizza_marchio
 
-OGGI = datetime(2026, 8, 5, 8, 0, 0)
+# Ancorato a "adesso" (non a una data fissa) così il report vede il file come fresco:
+# la freschezza è assoluta (now - data_dato), gli altri controlli sono relativi a OGGI.
+OGGI = datetime.now().replace(microsecond=0)
 CFG = carica()
 
 

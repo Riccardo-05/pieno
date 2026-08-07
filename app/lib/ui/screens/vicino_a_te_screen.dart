@@ -3,6 +3,7 @@
 // «Portami qui», stati "senza risultati" e "senza connessione".
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/location_service.dart';
@@ -22,8 +23,15 @@ import '../../models/navigatore.dart';
 import '../../models/segnalazione.dart';
 import '../components/scheda_impianto.dart';
 import '../components/sfondo_aurore.dart';
+import '../components/switch_pillola.dart';
 import 'impostazioni_screen.dart';
 import 'segnala_sheet.dart';
+
+// Quante alternative sotto la scheda principale. Il documento di progetto ne dichiarava
+// tre come massimo («il resto sta nella mappa»): cinque restano leggibili a colpo d'occhio
+// senza diventare un elenco, e ora ogni alternativa è toccabile e porta alla Mappa, quindi
+// il "resto" continua a stare lì. Vedi linee-guida/01-principi-ux.md.
+const int _maxAlternative = 5;
 
 class VicinoATeScreen extends ConsumerWidget {
   const VicinoATeScreen({super.key});
@@ -38,7 +46,15 @@ class VicinoATeScreen extends ConsumerWidget {
     final nav = ref.watch(navigatoreProvider);
 
     return Scaffold(
-      body: SfondoAurore(
+      // Swipe verso destra → torna alla Mappa (coerente con lo switch [Mappa | Vicino]).
+      body: GestureDetector(
+        onHorizontalDragEnd: (d) {
+          if ((d.primaryVelocity ?? 0) > 350) {
+            HapticFeedback.selectionClick();
+            ref.read(vistaProvider.notifier).state = Vista.mappa;
+          }
+        },
+        child: SfondoAurore(
         child: SafeArea(
           child: Padding(
             // Margini 22 px (schermata a scheda).
@@ -51,6 +67,7 @@ class VicinoATeScreen extends ConsumerWidget {
               data: (esito) => _contenuto(context, ref, esito, carburante, pos, elenco, capacita, nav),
             ),
           ),
+        ),
         ),
       ),
     );
@@ -106,13 +123,13 @@ class VicinoATeScreen extends ConsumerWidget {
   Widget _elenco(BuildContext context, WidgetRef ref, List<Impianto> ordinati, Carburante c,
       Posizione? pos, Navigatore nav, int capacita) {
     final media = mediaZona(ordinati, c);
+    final selezionato = ref.watch(selezionatoProvider);
     final migliore = ordinati.first;
     final prezzoMigliore = migliore.prezzoDi(c)!.valore;
     final risparmio =
         media == null ? 0.0 : risparmioSulPieno(prezzoMigliore, media, litri: capacita);
 
-    // Massimo tre alternative sotto la scheda principale (regola da non violare).
-    final alternative = ordinati.skip(1).take(3).toList();
+    final alternative = ordinati.skip(1).take(_maxAlternative).toList();
 
     return ListView(
       children: [
@@ -132,11 +149,27 @@ class VicinoATeScreen extends ConsumerWidget {
           Text('ALTERNATIVE', style: PienoText.occhiello),
           const SizedBox(height: 10),
           for (final a in alternative) ...[
-            ChipAlternativa(impianto: a, carburante: c, media: media),
+            ChipAlternativa(
+              impianto: a,
+              carburante: c,
+              media: media,
+              selezionato: a.id == selezionato,
+              // Toccare un'alternativa porta dritti alla Mappa su quell'impianto: prima
+              // si imposta la selezione, poi si cambia vista, così la Mappa è già
+              // centrata sull'impianto quando compare. Selezione condivisa (pag. 3):
+              // non si ricarica nulla, è lo stesso stato visto dall'altra parte.
+              onTap: () {
+                ref.read(selezionatoProvider.notifier).state = a.id;
+                ref.read(vistaProvider.notifier).state = Vista.mappa;
+              },
+            ),
             const SizedBox(height: 10),
           ],
         ],
-        const SizedBox(height: 90), // spazio per lo switch flottante
+        // Stessa riserva di spazio del foglio mappa: lo switch flottante è lo stesso
+        // oggetto alla stessa altezza, quindi anche l'ingombro che lascia è lo stesso.
+        SizedBox(
+            height: kSpazioSwitchFlottante + MediaQuery.of(context).padding.bottom),
       ],
     );
   }

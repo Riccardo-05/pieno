@@ -3,6 +3,7 @@
 // (carburanteProvider) fra Mappa, Vicino a te e Impostazioni.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
@@ -28,7 +29,10 @@ class _CarburanteSelettoreState extends ConsumerState<CarburanteSelettore> {
     super.dispose();
   }
 
-  void _apriChiudi() => _overlay == null ? _apri() : _chiudi();
+  void _apriChiudi() {
+    HapticFeedback.selectionClick();
+    _overlay == null ? _apri() : _chiudi();
+  }
 
   void _apri() {
     final box = context.findRenderObject() as RenderBox;
@@ -69,6 +73,7 @@ class _CarburanteSelettoreState extends ConsumerState<CarburanteSelettore> {
   }
 
   void _scegli(Carburante c) {
+    HapticFeedback.lightImpact(); // più percepibile della selectionClick alla scelta
     ref.read(carburanteProvider.notifier).state = c;
     _chiudi();
   }

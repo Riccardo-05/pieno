@@ -44,6 +44,8 @@ def _record(imp: Impianto) -> dict:
             }
             for chiave, prezzo in sorted(imp.prezzi.items())
         },
+        # Orario di apertura (OpenStreetMap), solo se abbinato: chiave assente altrimenti.
+        **({"oh": imp.orari} if imp.orari else {}),
     }
 
 

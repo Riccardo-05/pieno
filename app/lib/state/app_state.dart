@@ -1,6 +1,7 @@
 // Stato condiviso (Riverpod). "Un solo stato, due rappresentazioni" (pag. 3):
-// Mappa e Vicino a te leggono da qui. Per lo scheletro (Tappa 02) contiene il minimo:
-// carburante selezionato, provincia corrente, dati caricati.
+// Mappa e Vicino a te leggono da qui. Contiene carburante, provincia e dati caricati,
+// le impostazioni persistite (ricerca, rifornimento, navigatore), la selezione condivisa
+// fra le due viste e la coda locale di segnalazioni/valutazioni.
 
 import 'dart:convert';
 import 'dart:math';
@@ -81,13 +82,6 @@ final datiProvinciaProvider = FutureProvider<EsitoDati>((ref) async {
   final (dati, rete) = await repo.caricaProvincia(sigla);
   return EsitoDati(dati, rete);
 });
-
-/// Impianti ordinati per prezzo del carburante selezionato (base per "Vicino a te").
-List<Impianto> ordinaPerPrezzo(List<Impianto> impianti, Carburante c) {
-  final conPrezzo = impianti.where((i) => i.prezzoDi(c) != null).toList();
-  conPrezzo.sort((a, b) => a.prezzoDi(c)!.valore.compareTo(b.prezzoDi(c)!.valore));
-  return conPrezzo;
-}
 
 // ---- Impostazioni (Tappa 05), persistite su SharedPreferences. ----
 
@@ -238,8 +232,7 @@ final marcatoriProvider = Provider<List<Impianto>>((ref) {
   return filtra(dati.impianti, c, etaMaxGiorni: eta);
 });
 
-/// Le due viste che condividono lo stesso stato (pag. 3). Avvio previsto: Mappa,
-/// ma finché la Mappa è un segnaposto (Tappa 04) l'avvio resta su Vicino a te.
+/// Le due viste che condividono lo stesso stato (pag. 3). L'avvio è sulla Mappa.
 enum Vista { mappa, vicino }
 
 final vistaProvider = StateProvider<Vista>((ref) => Vista.mappa);
@@ -248,8 +241,10 @@ final vistaProvider = StateProvider<Vista>((ref) => Vista.mappa);
 /// marcatore apre il foglio; tornando all'elenco resta lo stesso impianto. null = nessuno.
 final selezionatoProvider = StateProvider<String?>((ref) => null);
 
-/// True quando il foglio della mappa è alzato: lo switch flottante sfuma (pag. 6).
-final foglioEspansoProvider = StateProvider<bool>((ref) => false);
+/// Altezza corrente del foglio prezzi della mappa, come frazione dello schermo (0–1).
+/// I comandi e lo switch flottante si posizionano SOPRA il foglio seguendo questo valore
+/// (pag. 6: "lo switch resta sopra il foglio; se il foglio sale, scompare in dissolvenza").
+final foglioExtentProvider = StateProvider<double>((ref) => 0.46);
 
 /// Consenso dell'utente a usare la posizione, chiesto DENTRO l'app prima del dialogo
 /// di sistema ("permessi graduali", pag. 13): null = mai chiesto, true = ha accettato,
@@ -287,9 +282,13 @@ final segnalazioniProvider = StateProvider<List<Segnalazione>>((ref) {
   ref.listenSelf((_, next) =>
       prefs.setStringList('segnalazioni', next.map((s) => jsonEncode(s.toJson())).toList()));
   final raw = prefs.getStringList('segnalazioni') ?? const [];
-  return raw
-      .map((s) => Segnalazione.fromJson(jsonDecode(s) as Map<String, dynamic>))
-      .toList();
+  try {
+    return raw
+        .map((s) => Segnalazione.fromJson(jsonDecode(s) as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return <Segnalazione>[]; // preferenze corrotte: non bloccare l'avvio
+  }
 });
 
 void aggiungiSegnalazione(WidgetRef ref, Segnalazione s) {
@@ -304,8 +303,12 @@ final valutazioniProvider = StateProvider<Map<String, int>>((ref) {
   ref.listenSelf((_, next) => prefs.setString('valutazioni', jsonEncode(next)));
   final raw = prefs.getString('valutazioni');
   if (raw == null) return <String, int>{};
-  return (jsonDecode(raw) as Map)
-      .map((k, v) => MapEntry(k as String, (v as num).toInt()));
+  try {
+    return (jsonDecode(raw) as Map)
+        .map((k, v) => MapEntry(k as String, (v as num).toInt()));
+  } catch (_) {
+    return <String, int>{}; // preferenze corrotte: non bloccare l'avvio
+  }
 });
 
 void valuta(WidgetRef ref, String impiantoId, int stelle) {
@@ -331,5 +334,10 @@ final rientroProvider = StateProvider<Rientro?>((ref) {
     }
   });
   final raw = prefs.getString('rientro');
-  return raw == null ? null : Rientro.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  if (raw == null) return null;
+  try {
+    return Rientro.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  } catch (_) {
+    return null; // preferenze corrotte: non bloccare l'avvio
+  }
 });

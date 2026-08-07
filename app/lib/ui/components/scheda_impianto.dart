@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../domain/orari.dart';
 import '../../models/carburante.dart';
 import '../../models/impianto.dart';
 import 'bottone_primario.dart';
@@ -56,6 +57,7 @@ class SchedaImpianto extends StatelessWidget {
             const SizedBox(height: 2),
             Text(dist, style: PienoText.valoreDettaglio),
           ],
+          _BadgeApertura(orari: impianto.orari),
           const SizedBox(height: 8),
           StelleValutazione(impiantoId: impianto.id),
           const SizedBox(height: 12),
@@ -73,6 +75,33 @@ class SchedaImpianto extends StatelessWidget {
                     style: PienoText.valoreDettaglio.copyWith(color: PienoColors.mentaScura)),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// Badge Aperto/Chiuso da orari OSM. Se l'orario non c'è o non è interpretabile, non
+// mostra nulla (onestà sul dato). L'apertura coincide col servito attivo.
+class _BadgeApertura extends StatelessWidget {
+  const _BadgeApertura({required this.orari});
+  final String? orari;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = statoApertura(orari);
+    final testo = etichettaApertura(orari);
+    if (testo == null) return const SizedBox.shrink();
+    final aperto = info.stato == StatoApertura.aperto;
+    final colore = aperto ? PienoColors.mentaScura : PienoColors.rame;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(aperto ? Icons.schedule : Icons.schedule_outlined, size: 15, color: colore),
+          const SizedBox(width: 5),
+          Text(testo, style: PienoText.valoreDettaglio.copyWith(color: colore)),
         ],
       ),
     );

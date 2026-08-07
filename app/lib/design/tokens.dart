@@ -2,7 +2,6 @@
 // FONTE UNICA: linee-guida/design-tokens.json e pag. 4 del documento di progetto.
 // I valori numerici sono riportati esatti. Non modificare qui senza aggiornare i token.
 
-import 'dart:ui';
 import 'package:flutter/widgets.dart';
 
 /// Colori della palette (pag. 4).
@@ -23,6 +22,10 @@ class PienoColors {
   // Vetro: bianco 72%, bordo bianco 85%.
   static const vetro = Color(0xB8FFFFFF); // 0.72 * 255 ≈ 184 = 0xB8
   static const vetroBordo = Color(0xD9FFFFFF); // 0.85 * 255 ≈ 217 = 0xD9
+  static const vetro50 = Color(0x80FFFFFF); // bianco 50%, riempimento chip alternativa
+
+  // Superficie dei fogli / pannelli inferiori (bottom sheet, foglio mappa).
+  static const foglio = Color(0xFFF7FAFB);
 
   // Aurore di fondo (mai visibili come forme).
   static const auroraMenta = Color(0x4D00B39A); // rgba(0,179,154,.30)

@@ -39,6 +39,24 @@ Questa cartella di linee guida resta accanto al codice e viene letta a ogni sess
 - Se il codice e le linee guida divergono, sbagliato è il codice finché non si decide il contrario esplicitamente.
 - Ogni tappa della roadmap si chiude aggiornando il file corrispondente.
 
+### Le decisioni prese
+
+Dove il progetto si discosta dal documento di partenza, la deviazione è **dichiarata nel file corrispondente** insieme alla sua ragione, in corsivo. Non sono dimenticanze e non vanno "corrette" riportandole al PDF senza discuterne. Ad oggi:
+
+| Decisione | Dove | Al posto di |
+| --- | --- | --- |
+| L'app apre sulla **Mappa**, l'Accesso si raggiunge dalle Impostazioni | `04-flusso-navigazione.md` | Accesso come primo passo |
+| Soglia «listino fermo» a **30 giorni** | `05-dati-e-qualita.md` | 2 giorni (dichiarati «regolabili») |
+| Prezzi **solo self**, orari da OpenStreetMap | `05-dati-e-qualita.md` | non previsto dal PDF |
+| Switch flottante **fermo in fondo** e uguale nelle due viste | `03-schermate.md` | sopra il foglio, in dissolvenza |
+| Fino a **cinque** alternative, e sono toccabili | `01-principi-ux.md`, `03-schermate.md` | massimo tre |
+
+Gli scarti che restano **da definire** (non inventati) sono invece elencati dove servono: settima regola di validazione e confini comunali ISTAT in `05-dati-e-qualita.md`, costo della deviazione nel calcolo del risparmio in `01-principi-ux.md`.
+
+## I difetti noti
+
+Non stanno qui: il registro dei difetti della codebase, con stato e priorità, è in [`../revisione/REVISIONE.md`](../revisione/REVISIONE.md). Le linee guida dicono come dovrebbe essere; la revisione dice dove il codice non ci arriva ancora.
+
 ## Prima riga da scrivere
 
 La cartella `linee-guida` e il job notturno dei dati. Prima ancora dell'app: senza dati puliti e datati, non c'è niente da mostrare in nessuna schermata.

@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'design/tokens.dart';
 import 'state/app_state.dart';
+import 'ui/screens/caricamento_screen.dart';
 import 'ui/screens/home_shell.dart';
+import 'ui/screens/spiegazione_posizione.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +40,66 @@ class PienoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const HomeShell(),
+      home: const AvvioGate(),
+    );
+  }
+}
+
+/// Mostra la schermata di caricamento a ogni avvio (almeno ~2,6 s) mentre l'app prepara
+/// i dati, poi passa all'app con una dissolvenza (easeInOut).
+class AvvioGate extends ConsumerStatefulWidget {
+  const AvvioGate({super.key});
+
+  @override
+  ConsumerState<AvvioGate> createState() => _AvvioGateState();
+}
+
+class _AvvioGateState extends ConsumerState<AvvioGate> {
+  bool _pronto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(manifestProvider); // scalda subito l'elenco province
+    WidgetsBinding.instance.addPostFrameCallback((_) => _avvia());
+  }
+
+  /// Sequenza d'avvio standard: caricamento → permessi → dati reali già pronti → app.
+  Future<void> _avvia() async {
+    // 1) Tempo minimo di visibilità del caricamento (l'animazione si vede tutta).
+    await Future.delayed(const Duration(milliseconds: 4000));
+    if (!mounted) return;
+
+    // 2) Permessi: spiegazione dentro l'app e poi, se accetta, dialogo di sistema.
+    if (ref.read(consensoPosizioneProvider) == null) {
+      await mostraSpiegazionePosizione(context);
+      if (!mounted) return;
+    }
+
+    // 3) Prepara i dati REALI mentre si vede ancora il caricamento.
+    if (ref.read(consensoPosizioneProvider) == true) {
+      // attende il fix di posizione (→ provincia giusta), con tetto di tempo.
+      try {
+        await ref.read(posizioneProvider.future).timeout(const Duration(seconds: 6));
+      } catch (_) {/* niente posizione: si prosegue con la provincia di default */}
+      if (!mounted) return;
+    }
+    try {
+      await ref.read(datiProvinciaProvider.future).timeout(const Duration(seconds: 8));
+    } catch (_) {/* offline/errore: l'app mostrerà lo stato adeguato */}
+    if (!mounted) return;
+
+    // 4) Pronto: l'app compare con i dati già caricati (nessuno spinner dentro).
+    setState(() => _pronto = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      child: _pronto ? const HomeShell() : const CaricamentoScreen(),
     );
   }
 }

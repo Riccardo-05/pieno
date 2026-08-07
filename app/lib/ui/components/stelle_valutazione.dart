@@ -3,6 +3,7 @@
 // dell'utente, toccabile per votare. Le esterne richiedono un'API (da collegare).
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
@@ -34,7 +35,10 @@ class StelleValutazione extends ConsumerWidget {
         for (var i = 1; i <= 5; i++)
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => valuta(ref, impiantoId, i == voto ? 0 : i), // ritoccando la stessa, azzera
+            onTap: () {
+              HapticFeedback.selectionClick();
+              valuta(ref, impiantoId, i == voto ? 0 : i); // ritoccando la stessa, azzera
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: Icon(

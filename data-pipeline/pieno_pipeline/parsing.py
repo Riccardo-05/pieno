@@ -133,15 +133,27 @@ def applica_prezzi(impianti: Dict[str, Impianto], dati: bytes,
         if valore is None:
             continue
         is_self = _get(riga, "isSelf") in ("1", "true", "True", "SI", "Si")
+        # SOLO self: i prezzi mostrati devono essere puliti, senza il sovrapprezzo del
+        # servito. Le righe "servito" vengono ignorate del tutto.
+        if not is_self:
+            continue
         nuovo = Prezzo(
             carburante=chiave,
             valore=round(valore, 3),
-            self_service=is_self,
+            self_service=True,
             comunicato_il=_parse_data(_get(riga, "dtComu")),
         )
         vecchio = imp.prezzi.get(chiave)
-        # Preferenza al self; a parità, alla comunicazione più recente.
-        if vecchio is None or (nuovo.self_service and not vecchio.self_service):
+        # A parità di carburante tiene la comunicazione più recente.
+        if vecchio is None or _piu_recente(nuovo, vecchio):
             imp.prezzi[chiave] = nuovo
         applicati += 1
     return applicati
+
+
+def _piu_recente(nuovo: Prezzo, vecchio: Prezzo) -> bool:
+    if nuovo.comunicato_il is None:
+        return False
+    if vecchio.comunicato_il is None:
+        return True
+    return nuovo.comunicato_il > vecchio.comunicato_il

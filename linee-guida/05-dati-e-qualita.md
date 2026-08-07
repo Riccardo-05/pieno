@@ -75,3 +75,9 @@ assente dopo, è un guasto da riparare.
 | 0 | impianti mostrati senza età del dato |
 
 **Nota su «dato non più vecchio di 24 ore».** Il dato servito è il file ministeriale, ripubblicato ogni giorno con i valori in vigore alle 8:00: la sua «età» è l'età del file, non la data dell'ultimo ritocco del singolo prezzo. La misura di freschezza (`data-pipeline/pieno_pipeline/report.py`) verifica quindi che il file pubblicato sia più recente di 24 ore; la quota di listini ritoccati di recente resta nel report come **diagnostica non vincolante**. Lo scarto mediano prezzo/reale (< 0,01 €/l) e le segnalazioni (< 5‰) sono misurabili solo con audit sul campo e in produzione: nel report restano «da definire».
+
+## Prezzi solo self e orari di apertura
+
+**Solo self.** I prezzi mostrati sono **esclusivamente quelli self-service**: le righe "servito" del dato MIMIT vengono ignorate in `data-pipeline/pieno_pipeline/parsing.py`. Così i prezzi sono puliti, senza il sovrapprezzo del servito. Se un impianto ha per un carburante solo il prezzo servito, quel carburante non viene mostrato.
+
+**Orari di apertura (OpenStreetMap).** MIMIT non contiene orari (il flag `isSelf` è solo self/servito, senza ore). L'orario di apertura — che di norma coincide con l'orario in cui il servito è disponibile — viene arricchito da **OpenStreetMap** (`opening_hours`) tramite Overpass e abbinato per vicinanza in `data-pipeline/pieno_pipeline/orari.py`. È **gratuito, best-effort e a copertura parziale**: dove OSM non ha l'orario, l'app non mostra nulla (mai un dato inventato). L'app calcola Aperto/Chiuso lato client (`app/lib/domain/orari.dart`).

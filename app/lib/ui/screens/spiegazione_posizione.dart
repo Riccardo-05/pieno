@@ -42,7 +42,7 @@ class _SpiegazionePosizione extends ConsumerWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF7FAFB),
+        color: PienoColors.foglio,
         borderRadius: BorderRadius.vertical(top: Radius.circular(PienoRadii.schedaPrincipale)),
       ),
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),

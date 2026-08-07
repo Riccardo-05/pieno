@@ -42,9 +42,10 @@ void main() {
     expect(eni.prezzoDi(Carburante.gasolio)!.selfService, true);
   });
 
-  test('ordinaPerPrezzo mette il più conveniente per primo', () {
+  test('l\'ordinamento per prezzo mette il più conveniente per primo', () {
     final dati = DatiProvincia.fromJson(jsonDecode(_json) as Map<String, dynamic>);
-    final ordinati = ordinaPerPrezzo(dati.impianti, Carburante.benzina);
+    final ordinati =
+        ordina(dati.impianti, Carburante.benzina, Ordinamento.prezzo, null);
     expect(ordinati.first.id, '1002'); // 1,829 < 1,859
   });
 
@@ -54,10 +55,9 @@ void main() {
   });
 
   group('marcatori della mappa', () {
-    List<Map<String, dynamic>> features({String? migliore, String? selezionato}) {
+    List<Map<String, dynamic>> features({String? migliore}) {
       final dati = DatiProvincia.fromJson(jsonDecode(_json) as Map<String, dynamic>);
-      final geo = geoJsonPrezzi(dati.impianti, Carburante.benzina,
-          idMigliore: migliore, idSelezionato: selezionato);
+      final geo = geoJsonPrezzi(dati.impianti, Carburante.benzina, idMigliore: migliore);
       return (geo['features'] as List).cast<Map<String, dynamic>>();
     }
 
@@ -65,23 +65,31 @@ void main() {
         f.firstWhere((e) => (e['properties'] as Map)['id'] == id)['properties']
             as Map<String, dynamic>;
 
-    test('il selezionato è marcato, gli altri no', () {
-      final f = features(selezionato: '1001');
-      expect(props(f, '1001')['selezionato'], isTrue);
-      expect(props(f, '1002')['selezionato'], isFalse);
+    test('solo gli impianti col carburante scelto diventano marcatori', () {
+      expect(features().length, 2); // entrambi hanno benzina
     });
 
-    test('senza selezione nessun marcatore risulta selezionato', () {
+    test('il migliore è marcato, gli altri no', () {
       final f = features(migliore: '1002');
-      expect(f.every((e) => (e['properties'] as Map)['selezionato'] == false), isTrue);
+      expect(props(f, '1002')['migliore'], isTrue);
+      expect(props(f, '1001')['migliore'], isFalse);
     });
 
-    test('un impianto può essere insieme migliore e selezionato', () {
-      // Sulla mappa vince la selezione: i filtri dei layer escludono il selezionato
-      // dal layer "migliore", così non si disegnano due pillole sullo stesso punto.
-      final p = props(features(migliore: '1002', selezionato: '1002'), '1002');
-      expect(p['migliore'], isTrue);
-      expect(p['selezionato'], isTrue);
+    test('il prezzo del marcatore è formattato con la virgola', () {
+      expect(props(features(), '1002')['prezzo'], '1,829');
+    });
+
+    // La selezione NON vive più tra i marcatori: sta in una sorgente separata a una sola
+    // feature (geoJsonUno), così toccare un marcatore non ricostruisce l'intero elenco.
+    test('geoJsonUno contiene solo l\'impianto selezionato (0 o 1 feature)', () {
+      final dati = DatiProvincia.fromJson(jsonDecode(_json) as Map<String, dynamic>);
+      final sel = geoJsonUno(dati.impianti.first, Carburante.benzina);
+      final feats = (sel['features'] as List).cast<Map<String, dynamic>>();
+      expect(feats.length, 1);
+      expect((feats.first['properties'] as Map)['id'], '1001');
+
+      final vuoto = geoJsonUno(null, Carburante.benzina);
+      expect(vuoto['features'] as List, isEmpty);
     });
   });
 }

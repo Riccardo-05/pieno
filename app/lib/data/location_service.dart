@@ -15,17 +15,18 @@ class LocationService {
   /// Da chiamare SOLO dopo che l'utente ha visto la schermata di spiegazione
   /// e ha scelto di procedere. Ritorna null se il permesso è negato.
   Future<Posizione?> fixIniziale() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return null;
-
+    // Prima cosa: il permesso. Così il dialogo di sistema compare col minimo di attesa
+    // (una sola chiamata di piattaforma prima del popup), non dopo altri controlli.
     var permesso = await Geolocator.checkPermission();
     if (permesso == LocationPermission.denied) {
-      permesso = await Geolocator.requestPermission(); // dialogo di sistema
+      permesso = await Geolocator.requestPermission(); // dialogo di sistema, subito
     }
     if (permesso == LocationPermission.denied ||
         permesso == LocationPermission.deniedForever) {
       return null;
     }
-
+    // Solo ora i controlli più lenti (servizio attivo, rilevamento vero e proprio).
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
     final p = await Geolocator.getCurrentPosition(
       // precisione "bilanciata", non massima (costa secondi e batteria).
       desiredAccuracy: LocationAccuracy.medium,

@@ -18,7 +18,8 @@ Le quattro schermate: misure e comportamenti (pagine 5–8 del documento di prog
 3. **Marcatori prezzo.** Pillola bianca 94%, Sora 400 15 px, coda a rombo 9 px. Il più conveniente è più grande (17 px, peso 600), in gradiente menta, con alone radiale Ø 96 px che lo isola.
 4. **Comandi a destra.** Due pulsanti tondi in vetro da 52 px: impostazioni sopra, posizione sotto. Non si sovrappongono mai ai marcatori: i prezzi hanno la precedenza nello spazio.
 5. **Foglio inferiore.** Vetro con sfocatura 26 px, raggio 36 px in alto, maniglia 44×5 px. A riposo mostra l'impianto selezionato; trascinato in alto diventa l'elenco completo. Stesso bottone della schermata 3, alto 70 px.
-6. **Gerarchia verticale.** Dall'alto: ricerca, mappa, switch, foglio. Lo switch resta sopra il foglio: se il foglio sale, lo switch scompare in dissolvenza.
+6. **Gerarchia verticale.** Dall'alto: ricerca, mappa, comandi tondi, foglio. I comandi tondi e l'attribuzione restano sopra il foglio e ne seguono l'altezza; se il foglio sale, scompaiono in dissolvenza.
+7. **Switch flottante.** *Decisione presa, diversa dal documento di progetto* (che lo voleva sopra il foglio, in dissolvenza quando il foglio sale). Lo switch sta **fermo in fondo allo schermo, alla stessa altezza della schermata 3**, e galleggia sopra il foglio. Ragione: lo switch non è navigazione ma un cambio di vista sullo stesso stato (pag. 3), quindi non deve spostarsi né sparire a seconda di quanto è alto il foglio — chi lo cerca lo trova sempre nello stesso punto in tutte e due le viste. Perché non risulti appiccicato sopra il contenuto, il foglio gli riserva spazio in coda alla lista e ne dissolve l'ultimo tratto nel colore del pannello.
 
 ## Schermata 3 — Vicino a te
 
@@ -27,7 +28,7 @@ Le quattro schermate: misure e comportamenti (pagine 5–8 del documento di prog
 3. **Prezzo.** Sora 300, 78 px, cifre tabulari. Interi in peso 300, decimali in 500: il numero resta leggero ma i millesimi si distinguono.
 4. **Pastiglia risparmio.** Menta al 10%, testo menta scura. Dichiara sempre la base: «sul pieno» (50 litri). Sotto 0,50 € sparisce invece di mostrare cifre irrilevanti.
 5. **Azione primaria.** Altezza 74 px, raggio 26 px, gradiente menta. Apre il navigatore scelto nelle impostazioni con le coordinate dell'impianto.
-6. **Alternative.** Tre chip in vetro 50%, raggio 24 px. Prezzo a destra in Sora 400; rame solo se sopra la media di zona.
+6. **Alternative.** Fino a cinque chip in vetro 50%, raggio 24 px (il documento di progetto ne indicava tre: vedi `01-principi-ux.md`). Prezzo a destra in Sora 400; rame solo se sopra la media di zona. Il chip è **toccabile**: seleziona l'impianto e porta alla Mappa, che lo mostra già scelto e centrato (selezione condivisa, pag. 3). Il chip selezionato si distingue come la riga attiva nel foglio della mappa: vetro pieno velato d'inchiostro e nome in grassetto.
 7. **Switch flottante.** Due sole destinazioni, selettore in inchiostro, staccato 30 px dal bordo inferiore. Stesso componente della schermata di accesso.
 
 ## Schermata 4 — Impostazioni

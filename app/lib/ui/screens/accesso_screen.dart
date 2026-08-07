@@ -3,6 +3,7 @@
 // Nessun backend di autenticazione: i pulsanti di accesso sono predisposti ma non
 // collegati (la sincronizzazione arriva più avanti). Non si finge un login.
 
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
@@ -15,7 +16,8 @@ import '../components/vetro.dart';
 class AccessoScreen extends StatefulWidget {
   const AccessoScreen({super.key});
 
-  static Route<void> rotta() => MaterialPageRoute(builder: (_) => const AccessoScreen());
+  // CupertinoPageRoute: transizione iOS con back-swipe dal bordo per tornare indietro.
+  static Route<void> rotta() => CupertinoPageRoute(builder: (_) => const AccessoScreen());
 
   @override
   State<AccessoScreen> createState() => _AccessoScreenState();
@@ -82,12 +84,13 @@ class _AccessoScreenState extends State<AccessoScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  gradient: PienoColors.gradienteMenta,
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/icons/logo.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(width: 10),

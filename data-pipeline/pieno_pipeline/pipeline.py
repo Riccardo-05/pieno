@@ -17,7 +17,7 @@ import argparse
 import sys
 from datetime import datetime, timezone
 
-from . import build, parsing, report, sources, validation
+from . import build, orari, parsing, report, sources, validation
 from .config import carica
 from .geo import ConfiniComunali
 
@@ -48,6 +48,23 @@ def esegui(args: argparse.Namespace) -> int:
     storico = sources.carica_storico(cfg)
     confini = ConfiniComunali(disponibile=cfg.sorgenti["confini_comunali"].abilitato)
     conteggi = validation.valida(impianti, cfg, data_dato, storico=storico, confini=confini)
+
+    # --- arricchimento orari OSM (best-effort, gratuito) ---------------------------
+    s_osm = cfg.sorgenti.get("osm_orari")
+    if s_osm is not None and s_osm.abilitato:
+        try:
+            punti = orari.scarica_orari(s_osm.url)
+            indice = orari.IndiceOrari(punti)
+            n = 0
+            for imp in impianti.values():
+                if imp.lat is not None and imp.lon is not None:
+                    oh = indice.orario_vicino(imp.lat, imp.lon)
+                    if oh:
+                        imp.orari = oh
+                        n += 1
+            print(f"Orari OSM: abbinati {n}/{len(impianti)} impianti (su {len(punti)} POI con orario).")
+        except Exception as e:  # noqa: BLE001 — best-effort: non deve bloccare la build
+            print(f"Orari OSM non disponibili ({e}): si prosegue senza.", file=sys.stderr)
 
     # --- report --------------------------------------------------------------------
     ver = build.versione(data_dato)

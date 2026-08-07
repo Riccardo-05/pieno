@@ -24,11 +24,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+# Icona applicazione (launcher). Genera le icone native con:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icons/logo.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/map_style.json
+    - assets/icons/
+    - assets/icons/caricamento/
   # Font di pag. 4: Sora per numeri e prezzi (cifre tabulari), Manrope per il resto.
   # Sono i file VARIABILI ufficiali (asse wght): un solo .ttf per famiglia copre tutti
   # i pesi usati in design/typography.dart, quindi qui non si dichiara `weight`.

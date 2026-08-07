@@ -30,7 +30,7 @@ La data del dato è sempre visibile. Gli impianti con listini fermi da giorni ve
 
 1. Una sola azione primaria per schermata. Se ne servono due, la seconda è testo, non bottone.
 2. Il rame compare solo per i prezzi sopra la media di zona. Il blu solo per la posizione dell'utente.
-3. Massimo tre alternative sotto la scheda principale. Il resto sta nella mappa.
+3. Massimo **cinque** alternative sotto la scheda principale. Il resto sta nella mappa. *(Il documento di progetto ne indicava tre: alzate a cinque perché restano leggibili a colpo d'occhio senza diventare un elenco, e perché ogni alternativa è ora toccabile e porta alla Mappa su quell'impianto — il «resto sta nella mappa» vale ancora, con una porta in più per arrivarci. Il numero è `_maxAlternative` in `ui/screens/vicino_a_te_screen.dart`.)*
 4. L'account non è mai obbligatorio: l'app funziona al primo avvio, senza registrazione.
 
 ## Regola di crescita

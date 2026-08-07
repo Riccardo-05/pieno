@@ -34,6 +34,10 @@ class Impianto {
   final double? lon;
   final Map<Carburante, Prezzo> prezzi;
 
+  /// Orari di apertura (formato OpenStreetMap `opening_hours`), se disponibili. Null quando
+  /// OSM non li ha per questo impianto. I prezzi mostrati sono sempre e solo self.
+  final String? orari;
+
   const Impianto({
     required this.id,
     required this.nome,
@@ -43,6 +47,7 @@ class Impianto {
     required this.lat,
     required this.lon,
     required this.prezzi,
+    this.orari,
   });
 
   factory Impianto.fromJson(Map<String, dynamic> j) {
@@ -61,6 +66,7 @@ class Impianto {
       lat: (j['lat'] as num?)?.toDouble(),
       lon: (j['lon'] as num?)?.toDouble(),
       prezzi: prezzi,
+      orari: j['oh'] as String?,
     );
   }
 
