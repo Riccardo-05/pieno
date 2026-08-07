@@ -136,9 +136,9 @@ sui tempi.
 
 `cloudflared` come servizio di Windows, così riparte da solo dopo l'accensione delle 08:00.
 Il tunnel punta all'API, **non** a OSRM. Sul dominio si pubblica un solo nome, es.
-`percorsi.<dominio>`.
+`percorsi.pienocarburanti.com`.
 
-**Esito:** `https://percorsi.<dominio>/v1/salute` risponde da fuori casa, con certificato
+**Esito:** `https://percorsi.pienocarburanti.com/v1/salute` risponde da fuori casa, con certificato
 valido, e nessuna porta risulta aperta sul modem.
 
 ### Fase 4 · L'app parla all'API

@@ -141,7 +141,7 @@ nessuna porta aperta sul modem, IP di casa invisibile, certificati automatici.
 ```powershell
 cloudflared tunnel login                      # apre il browser, scegli la zona
 cloudflared tunnel create pieno-percorsi      # annota l'UUID stampato
-cloudflared tunnel route dns pieno-percorsi percorsi.<dominio>
+cloudflared tunnel route dns pieno-percorsi percorsi.pienocarburanti.com
 ```
 
 Poi `%UserProfile%\.cloudflared\config.yml`:
@@ -152,7 +152,7 @@ credentials-file: C:\Users\<utente>\.cloudflared\<UUID>.json
 
 ingress:
   # Il tunnel punta all'API, MAI a OSRM: il motore non si espone.
-  - hostname: percorsi.<dominio>
+  - hostname: percorsi.pienocarburanti.com
     service: http://127.0.0.1:8080
   - service: http_status:404
 ```
@@ -161,17 +161,21 @@ ingress:
 cloudflared service install    # riparte da solo dopo l'accensione delle 08:00
 ```
 
-**Esito da verificare:** `https://percorsi.<dominio>/v1/salute` risponde da fuori casa con
+**Esito da verificare:** `https://percorsi.pienocarburanti.com/v1/salute` risponde da fuori casa con
 certificato valido, e nessuna porta risulta aperta sul modem.
 
-Fatto questo, l'app va costruita con l'URL:
+L'app punta già qui: `kBaseUrlPercorsi` in `app/lib/state/app_state.dart` ha
+`https://percorsi.pienocarburanti.com` come valore predefinito, quindi una build normale
+funziona senza flag. Il predefinito è di produzione apposta — bastava dimenticare un
+`--dart-define` per pubblicare un'app che non chiede mai le distanze reali, e nessuno se ne
+sarebbe accorto, perché il ripiego sulla stima è silenzioso e legittimo.
+
+Per le prove si scavalca:
 
 ```bash
-flutter build apk --dart-define=PIENO_PERCORSI=https://percorsi.<dominio>
+flutter run --dart-define=PIENO_PERCORSI=http://10.0.2.2:8080   # emulatore verso il PC
+flutter run --dart-define=PIENO_PERCORSI=                        # nessun servizio: solo stima
 ```
-
-Senza `--dart-define` l'app non contatta nulla e resta sulla stima dichiarata: è il
-comportamento corretto finché il dominio non c'è.
 
 ## Il fattore stradale (Fase 5)
 

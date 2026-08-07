@@ -60,18 +60,17 @@ significa scoprire il guasto fra due settimane, di notte.
 
 ## Il dominio
 
-**6.** Vai su **dash.cloudflare.com**. Crea l'account se non ce l'hai.
+**6.** ✅ **Fatto.** Il dominio è **`pienocarburanti.com`**, comprato su Cloudflare il 7 agosto
+2026. La zona DNS è già nell'account, quindi non c'è nessun nameserver da spostare.
 
-**7.** Menù a sinistra → **Domain Registration** → **Register Domain**. Cerca un nome libero,
-**corto e facile da scrivere al telefono** (finirà in `percorsi.TUODOMINIO`, e lo digiterai a
-mano nelle verifiche finali). Compra: circa 10 € l'anno, al costo.
+Il servizio vivrà su **`percorsi.pienocarburanti.com`**. Tutti i comandi qui sotto lo
+riportano già scritto: si copiano e si incollano così come sono.
 
-Da qui in avanti, dove è scritto `TUODOMINIO`, metti quello che hai comprato.
+**7.** ✅ **Fatto.** Vai avanti al punto 8.
 
-> Non serve comprarlo per forza qui: un dominio che hai già altrove va bene, ma va spostata
-> la gestione DNS su Cloudflare cambiando i nameserver — e se su quel dominio hai una casella
-> email devi prima controllare che i record **MX** siano stati importati, altrimenti l'email
-> smette di arrivare. Comprarne uno nuovo qui evita tutto questo.
+> Se un domani cambi dominio, le occorrenze da aggiornare sono qui, in
+> `percorsi/README.md`, in `linee-guida/10-percorsi-e-backend.md` e — l'unica nel codice — in
+> `app/lib/state/app_state.dart`, alla costante `kBaseUrlPercorsi`.
 
 ## Il tunnel
 
@@ -106,7 +105,7 @@ Stampa `Created tunnel pieno-percorsi with id a1b2c3d4-e5f6-...`.
 **11.** Assegna il nome pubblico:
 
 ```bash
-cloudflared tunnel route dns pieno-percorsi percorsi.TUODOMINIO
+cloudflared tunnel route dns pieno-percorsi percorsi.pienocarburanti.com
 ```
 
 **12.** Scrivi la configurazione:
@@ -123,7 +122,7 @@ tunnel: pieno-percorsi
 credentials-file: C:\Users\rikyr\.cloudflared\INCOLLA-QUI-IDENTIFICATIVO.json
 
 ingress:
-  - hostname: percorsi.TUODOMINIO
+  - hostname: percorsi.pienocarburanti.com
     service: http://127.0.0.1:8080
   - service: http_status:404
 ```
@@ -141,7 +140,7 @@ cloudflared tunnel run pieno-percorsi
 
 Lascia la finestra aperta. Deve stampare righe con `Registered tunnel connection`.
 
-**14.** Nel browser apri `https://percorsi.TUODOMINIO/v1/salute`.
+**14.** Nel browser apri `https://percorsi.pienocarburanti.com/v1/salute`.
 Deve rispondere `{"stato":"su",...}` con il lucchetto del certificato.
 
 **15.** Torna al terminale e premi **Ctrl+C** per fermarlo.
@@ -159,7 +158,7 @@ Get-Service cloudflared
 
 Devi vedere `Status: Running` e `StartType: Automatic`.
 
-**17.** Riapri nel browser `https://percorsi.TUODOMINIO/v1/salute`.
+**17.** Riapri nel browser `https://percorsi.pienocarburanti.com/v1/salute`.
 
 Se **non** risponde più, il servizio gira con l'account di sistema e cerca la configurazione
 in un'altra cartella. Rimedio, sempre in PowerShell amministratore:
@@ -178,10 +177,10 @@ Poi riprova.
 **18.** Prendi il telefono e **spegni il Wi-Fi**. Devi stare sui dati mobili: è l'unico modo
 di provare che si arrivi davvero da fuori casa.
 
-**19.** Apri `https://percorsi.TUODOMINIO/v1/salute`
+**19.** Apri `https://percorsi.pienocarburanti.com/v1/salute`
 → deve rispondere `{"stato":"su",...}`.
 
-**20.** Apri `https://percorsi.TUODOMINIO/route/v1/driving/9.19,45.46;9.22,45.47`
+**20.** Apri `https://percorsi.pienocarburanti.com/route/v1/driving/9.19,45.46;9.22,45.47`
 → deve dare **errore o pagina non trovata**.
 
 Se invece risponde con dei numeri, il tunnel sta esponendo il motore: torna al punto 12 e
@@ -239,10 +238,11 @@ Il tuo iPhone deve comparire nell'elenco.
 **Signing & Capabilities**, e scegli il tuo Apple ID come *Team*. Basta un account gratuito:
 la firma dura sette giorni, più che sufficiente per provare.
 
-**27.** Avvia l'app, mettendo il tuo dominio:
+**27.** Avvia l'app. Il dominio è già il valore predefinito nel codice, quindi non serve
+nessun flag:
 
 ```bash
-flutter run --dart-define=PIENO_PERCORSI=https://percorsi.TUODOMINIO
+flutter run
 ```
 
 **28.** La prima volta l'iPhone rifiuta di aprirla. Vai in **Impostazioni → Generali → VPN e
@@ -289,14 +289,19 @@ i risparmi devono calare ancora. Chiudi e riapri l'app: il valore deve essere ri
 
 # Da ricordare, dopo
 
-**Ogni build dell'app va fatta con il dominio:**
+**Le build non hanno bisogno di flag.** L'indirizzo `https://percorsi.pienocarburanti.com` è
+il valore predefinito nel codice (`kBaseUrlPercorsi` in `app/lib/state/app_state.dart`),
+quindi basta:
 
 ```bash
-flutter build ipa --dart-define=PIENO_PERCORSI=https://percorsi.TUODOMINIO
+flutter build ipa
 ```
 
-Senza quel `--dart-define` l'app non contatta nulla e resta sulla stima. Non si rompe, ma non
-fa quello per cui esiste il servizio.
+È voluto: se il dominio fosse stato solo un flag da riga di comando, dimenticarlo una volta
+avrebbe prodotto un'app che non chiede mai le distanze reali — e non se ne sarebbe accorto
+nessuno, perché ripiegare sulla stima è silenzioso e legittimo.
+
+Il `--dart-define` resta per le prove, quando serve puntare altrove.
 
 **Tre voci ancora da definire** in [`rilascio/privacy.md`](rilascio/privacy.md), che gli store
 pretendono prima della pubblicazione:

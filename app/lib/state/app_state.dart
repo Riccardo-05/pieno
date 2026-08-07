@@ -286,11 +286,20 @@ final posizioneProvider = FutureProvider<Posizione?>((ref) async {
 
 // ---- Distanze su strada (linee-guida/10-percorsi-e-backend.md, Fase 4). ----
 
-/// URL del servizio percorsi. Vuoto finché la Fase 3 non pubblica il dominio:
-/// con l'URL vuoto l'app non prova nemmeno, e resta sulla stima **dichiarata**.
-/// Si passa alla build senza toccare il codice:
-///   flutter run --dart-define=PIENO_PERCORSI=https://percorsi.esempio.it
-const String kBaseUrlPercorsi = String.fromEnvironment('PIENO_PERCORSI');
+/// URL del servizio percorsi.
+///
+/// Il valore predefinito è quello di produzione, non un segnaposto: una build
+/// senza `--dart-define` deve funzionare, altrimenti basta dimenticare un flag
+/// per pubblicare un'app che non chiede mai le distanze reali — e nessuno se ne
+/// accorge, perché il ripiego sulla stima è silenzioso e legittimo.
+///
+/// Si scavalca per le prove, senza toccare il codice:
+///   flutter run --dart-define=PIENO_PERCORSI=http://10.0.2.2:8080
+/// Passando una stringa vuota l'app non contatta nulla e resta sulla stima.
+const String kBaseUrlPercorsi = String.fromEnvironment(
+  'PIENO_PERCORSI',
+  defaultValue: 'https://percorsi.pienocarburanti.com',
+);
 
 final percorsiProvider = Provider<ServizioPercorsi>((ref) {
   final servizio = PercorsiHttp(baseUrl: kBaseUrlPercorsi);
