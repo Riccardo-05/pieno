@@ -21,6 +21,12 @@ CONTENITORE="pieno-osrm"
 PORTA_PROVA=5001
 STATO="$QUI/.grafo-attivo"
 
+# Lo script tiene da sé il proprio registro: l'attività pianificata deve solo
+# lanciarlo, senza redirezioni annidate fra virgolette — che su Windows sono la
+# prima cosa che si rompe.
+mkdir -p "$QUI/log"
+exec > >(tee -a "$QUI/log/ricostruzione-$(date +%Y-%m-%d).log") 2>&1
+
 dire() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 morire() { dire "INTERROTTO: $*"; exit 1; }
 
