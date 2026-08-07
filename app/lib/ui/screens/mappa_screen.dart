@@ -42,16 +42,28 @@ const _layers = ['prezzi-testo', 'prezzi-migliore', 'prezzi-selezionato'];
 // Layer selezionabili (i cluster no: si aprono con lo zoom, non si selezionano).
 const _layersToccabili = {'prezzi-testo', 'prezzi-migliore', 'prezzi-selezionato'};
 
-// Altezze del foglio prezzi (frazioni di schermo): chiuso (mostra prezzo + risparmio),
-// medio, aperto. Il default è "medio", così di norma si vedono prezzo e risparmio.
+// Altezze del foglio prezzi, in frazioni di schermo.
+//
+// _foglioMedio è l'altezza di RIPOSO, quella con cui l'app si apre, e ha un compito
+// preciso: far vedere **prezzo e risparmio sul pieno** senza che l'utente alzi niente.
+// La scheda, dalla maniglia alla pastiglia del risparmio, misura ~330 pt (nome, via,
+// distanza, apertura, stelle, prezzo 52, pastiglia); su uno schermo da 874 pt sono 0,38,
+// più un margine perché il bottone «Portami qui» si intraveda e inviti a salire.
+// _foglioMin resta l'altezza "da parte", per guardare la mappa.
 const double _foglioMin = 0.30;
-const double _foglioMedio = 0.46;
+const double _foglioMedio = 0.52;
 const double _foglioMax = 0.92;
 
 // Quante righe mostrare sotto la scheda. L'elenco completo di una provincia arriva a
 // ~1300 impianti: oltre le prime decine nessuno scorre, e il foglio diventa un muro di
 // numeri. Il resto della provincia si guarda sulla mappa, che è la sua rappresentazione.
 const int _maxRigheFoglio = 35;
+
+// Zoom di partenza: appena SOPRA la soglia dei raggruppamenti (clusterMaxZoom = 12), così
+// aprendo l'app si leggono i prezzi dei singoli impianti e non i cluster — che sono una
+// risposta alla domanda «quanto costa più o meno qui», non «dove faccio il pieno adesso».
+// Basta allargare di poco perché ricompaiano, che è il loro mestiere.
+const double _zoomIniziale = 12.6;
 
 /// Rimbalzo iOS **solo verso il basso**. Quando il foglio ha già toccato [_foglioMin] non
 /// può rimpicciolirsi oltre e `DraggableScrollableSheet` gira il resto del gesto alla
@@ -103,6 +115,10 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   String? _provinciaCentrata; // per ricentrare solo al cambio di provincia
   final _sheetController = DraggableScrollableController();
   bool _boxMossoDallaPresa = false; // il gesto sulla scheda ha mosso il box, non la lista
+  // Vero solo quando la selezione nasce dal tocco su un marcatore: in quel caso la mappa
+  // non deve muoversi sotto il dito. Da ogni altra parte — elenco del foglio, chip di
+  // «Vicino a te» — l'utente non sta guardando la mappa, e va portato sul punto.
+  bool _selezioneDaMarcatore = false;
 
   @override
   void initState() {
@@ -275,6 +291,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
 
   void _toggleSelezione(String id) {
     HapticFeedback.selectionClick();
+    _selezioneDaMarcatore = true;
     // Ritoccando la stazione già selezionata la si deseleziona.
     final corrente = ref.read(selezionatoProvider);
     ref.read(selezionatoProvider.notifier).state = corrente == id ? null : id;
@@ -347,7 +364,8 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         ? LatLng(pos.lat, pos.lon)
         : LatLng(ordinati.first.lat ?? 41.9, ordinati.first.lon ?? 12.5);
     _movimentoProgrammatico = true;
-    c.animateCamera(CameraUpdate.newLatLngZoom(_centroVisibile(grezzo, 11), 11));
+    c.animateCamera(
+        CameraUpdate.newLatLngZoom(_centroVisibile(grezzo, _zoomIniziale), _zoomIniziale));
   }
 
   /// Porta in vista l'impianto selezionato, ma **solo se è fuori schermo**: chi ha
@@ -362,24 +380,55 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     final punto = LatLng(imp!.lat!, imp.lon!);
 
     final zoom = c.cameraPosition?.zoom ?? 11;
-    bool visibile = false;
-    try {
-      final area = await c.getVisibleRegion();
-      visibile = punto.latitude >= area.southwest.latitude &&
-          punto.latitude <= area.northeast.latitude &&
-          punto.longitude >= area.southwest.longitude &&
-          punto.longitude <= area.northeast.longitude;
-    } catch (_) {
-      // Regione non disponibile: meglio non muovere la mappa che muoverla a sproposito.
+    final daMarcatore = _selezioneDaMarcatore;
+    _selezioneDaMarcatore = false;
+
+    if (daMarcatore) {
+      // Tocco su un marcatore: il foglio si apre almeno all'altezza di riposo, ma la mappa
+      // si muove solo se il punto è fuori schermo — non deve scappare sotto il dito di chi
+      // l'ha appena toccato.
+      _portaFoglioA(_foglioMedio, soloSePiuBasso: true);
+      bool visibile = false;
+      try {
+        final area = await c.getVisibleRegion();
+        visibile = punto.latitude >= area.southwest.latitude &&
+            punto.latitude <= area.northeast.latitude &&
+            punto.longitude >= area.southwest.longitude &&
+            punto.longitude <= area.northeast.longitude;
+      } catch (_) {
+        return; // regione non disponibile: meglio ferma che mossa a sproposito
+      }
+      if (visibile && zoom >= _zoomIniziale) return;
+      _movimentoProgrammatico = true;
+      final zoomFinale = zoom < _zoomIniziale ? _zoomIniziale : zoom;
+      await c.animateCamera(
+        CameraUpdate.newLatLngZoom(_centroVisibile(punto, zoomFinale), zoomFinale),
+      );
       return;
     }
-    if (visibile && zoom >= 12) return;
 
+    // Selezione dall'elenco (o da «Vicino a te»): il marcatore va portato al CENTRO della
+    // fascia di mappa che resterà scoperta, e il foglio riportato all'altezza di riposo —
+    // se resta alto copre il punto che si è appena chiesto di vedere.
+    _portaFoglioA(_foglioMedio);
     _movimentoProgrammatico = true;
-    final zoomFinale = zoom < 12 ? 13.0 : zoom;
-    await c.animateCamera(
-      CameraUpdate.newLatLngZoom(_centroVisibile(punto, zoomFinale), zoomFinale),
-    );
+    final zoomFinale = zoom < _zoomIniziale ? _zoomIniziale : zoom;
+    await c.animateCamera(CameraUpdate.newLatLngZoom(
+      _centroVisibile(punto, zoomFinale, estensioneFoglio: _foglioMedio),
+      zoomFinale,
+    ));
+  }
+
+  /// Porta il foglio a [meta]. Con [soloSePiuBasso] lo alza se è più in basso, ma non lo
+  /// abbassa mai: serve per il tocco su un marcatore, dove il foglio deve comparire senza
+  /// però rubare spazio a chi stava già leggendo l'elenco.
+  void _portaFoglioA(double meta, {bool soloSePiuBasso = false}) {
+    if (!_sheetController.isAttached) return;
+    final corrente = _sheetController.size;
+    if (soloSePiuBasso && corrente >= meta - 0.01) return;
+    if ((corrente - meta).abs() <= 0.01) return;
+    _sheetController.animateTo(meta,
+        duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
   }
 
   void _vaiAllaPosizione() {
@@ -399,9 +448,13 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   // La camera mette il proprio centro a metà schermo (H/2); per portare target al centro
   // della fascia visibile [topPx, H − foglioPx] lo si sposta a sud di (foglioPx − topPx)/2
   // pixel. Calcolo geografico → funziona su web e su nativo, con qualsiasi altezza foglio.
-  LatLng _centroVisibile(LatLng target, double zoom) {
+  LatLng _centroVisibile(LatLng target, double zoom, {double? estensioneFoglio}) {
     final mq = MediaQuery.of(context);
-    final foglioPx = mq.size.height * ref.read(foglioExtentProvider);
+    // Quando la mappa si muove insieme al foglio, il conto va fatto sull'altezza a cui il
+    // foglio STA ANDANDO, non su quella che ha in questo istante: altrimenti si centra
+    // rispetto a una fascia visibile che un attimo dopo non esiste più.
+    final foglioPx =
+        mq.size.height * (estensioneFoglio ?? ref.read(foglioExtentProvider));
     final topPx = mq.padding.top + 8;
     final salitaPx = (foglioPx - topPx) / 2; // di quanto il punto deve salire sullo schermo
     if (salitaPx <= 0) return target;
@@ -478,14 +531,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
     ref.listen(elencoProvider, (_, __) => _aggiornaSorgente());
     ref.listen(selezionatoProvider, (_, id) {
       _aggiornaSelezione(); // leggero: aggiorna solo la sorgente della selezione
-      _mostraSelezionato(id);
-      // Toccando un marcatore, apri il foglio almeno all'altezza "media".
-      if (id != null &&
-          _sheetController.isAttached &&
-          _sheetController.size < _foglioMedio - 0.01) {
-        _sheetController.animateTo(_foglioMedio,
-            duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-      }
+      _mostraSelezionato(id); // porta in vista il punto e sistema l'altezza del foglio
     });
     ref.listen(posizioneProvider, (prev, next) {
       // Ignora le transizioni di stato (es. "loading" quando si dà il consenso): reagisci
@@ -803,14 +849,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
         ? distanzaKm(pos.lat, pos.lon, selezionato.lat!, selezionato.lon!)
         : null;
 
-    // Righe mostrate: le prime _maxRigheFoglio secondo l'ordinamento scelto. L'occhiello
-    // dichiara sempre quante sono: se l'elenco è tagliato non può dire "tutti".
-    final righe = elenco.length > _maxRigheFoglio
-        ? elenco.sublist(0, _maxRigheFoglio)
-        : elenco;
-    final occhiello = righe.length < elenco.length
-        ? 'I PRIMI ${righe.length} IMPIANTI'
-        : 'TUTTI GLI IMPIANTI';
+    // «Altre»: l'impianto della scheda qui sopra non si ripete nell'elenco, altrimenti
+    // l'occhiello direbbe una cosa falsa. Le righe restano al massimo _maxRigheFoglio,
+    // nell'ordine scelto.
+    final altre = elenco.where((i) => i.id != selezionato.id).toList();
+    final righe =
+        altre.length > _maxRigheFoglio ? altre.sublist(0, _maxRigheFoglio) : altre;
 
     // Testata della lista (scorre insieme alle righe, dentro il box): la scheda
     // dell'impianto selezionato e l'occhiello. Le righe sono costruite in modo lazy da
@@ -832,7 +876,7 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       ),
       Padding(
         padding: const EdgeInsets.only(top: 18, bottom: 8),
-        child: Text(occhiello, style: PienoText.occhiello),
+        child: Text('ALTRE STAZIONI', style: PienoText.occhiello),
       ),
     ];
 
@@ -846,12 +890,12 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       itemBuilder: (context, index) {
         if (index < testa.length) return testa[index];
         final i = righe[index - testa.length];
-        return _riga(i, carburante, media, i.id == selezionato.id);
+        return _riga(i, carburante, media);
       },
     );
   }
 
-  Widget _riga(Impianto i, Carburante carburante, double? media, bool attivo) {
+  Widget _riga(Impianto i, Carburante carburante, double? media) {
     final prezzo = i.prezzoDi(carburante)!;
     final rame = sopraLaMedia(i, carburante, media);
     final nome = i.nome.isNotEmpty ? i.nome : i.marchio;
@@ -859,35 +903,27 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
       label: '$nome, ${prezzoParlato(prezzo.valore)}'
           '${rame ? ', sopra la media di zona' : ''}',
       button: true,
-      selected: attivo,
       excludeSemantics: true,
-      child: _corpoRiga(i, prezzo, nome, rame, attivo),
+      child: _corpoRiga(i, prezzo, nome, rame),
     );
   }
 
-  Widget _corpoRiga(
-      Impianto i, Prezzo prezzo, String nome, bool rame, bool attivo) {
+  Widget _corpoRiga(Impianto i, Prezzo prezzo, String nome, bool rame) {
     return InkWell(
       onTap: () => ref.read(selezionatoProvider.notifier).state = i.id,
       child: Container(
-        // La riga selezionata è la stessa cosa del marcatore in inchiostro sulla mappa:
-        // qui si segnala con una superficie morbida, non con una linea dura (pag. 2).
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: attivo ? 12 : 0),
-        decoration: BoxDecoration(
-          color: attivo ? PienoColors.inchiostro.withValues(alpha: 0.06) : null,
-          borderRadius: attivo ? BorderRadius.circular(18) : null,
-          border: attivo
-              ? null
-              : const Border(bottom: BorderSide(color: Color(0x14000000))),
+        // Nessuno stato "attivo": l'impianto selezionato sta nella scheda sopra e non
+        // compare qui — l'elenco è delle ALTRE stazioni.
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0x14000000))),
         ),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 nome,
-                style: attivo
-                    ? PienoText.voceImpostazione.copyWith(fontWeight: FontWeight.w700)
-                    : PienoText.voceImpostazione,
+                style: PienoText.voceImpostazione,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

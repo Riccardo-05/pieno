@@ -18,8 +18,16 @@ class CaricamentoScreen extends StatelessWidget {
     final h = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
+      // Entra come UNA superficie sola: prima il logo sfumava per conto suo e il resto
+      // (marchio, sottotitolo, barra) compariva di colpo. L'uscita è la dissolvenza
+      // incrociata verso l'app, in main.dart.
       body: SafeArea(
-        child: Column(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOut,
+          builder: (_, v, child) => Opacity(opacity: v, child: child),
+          child: Column(
           children: [
             // Logo + nome centrati come gruppo unico nello spazio disponibile.
             Expanded(
@@ -27,14 +35,13 @@ class CaricamentoScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Al logo resta la sola crescita: la dissolvenza è quella d'insieme.
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
                       duration: const Duration(milliseconds: 700),
                       curve: Curves.easeInOut,
-                      builder: (_, v, child) => Opacity(
-                        opacity: v,
-                        child: Transform.scale(scale: 0.94 + 0.06 * v, child: child),
-                      ),
+                      builder: (_, v, child) =>
+                          Transform.scale(scale: 0.94 + 0.06 * v, child: child),
                       child: SizedBox(
                         height: h * 0.34,
                         child: Image.asset(
@@ -55,6 +62,7 @@ class CaricamentoScreen extends StatelessWidget {
             const _BarraContinua(),
             const SizedBox(height: 44),
           ],
+          ),
         ),
       ),
     );

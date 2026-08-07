@@ -139,13 +139,6 @@ final etaMassimaGiorniProvider = StateProvider<int>((ref) {
   return prefs.getInt('etaMassima') ?? 30;
 });
 
-/// Avvisi sul percorso (Impostazioni → Mappa e navigazione).
-final avvisiPercorsoProvider = StateProvider<bool>((ref) {
-  final prefs = ref.watch(prefsProvider);
-  ref.listenSelf((_, next) => prefs.setBool('avvisiPercorso', next));
-  return prefs.getBool('avvisiPercorso') ?? false;
-});
-
 /// Ordina secondo il criterio scelto. Prezzo: crescente. Distanza: dal più vicino
 /// (serve la posizione). Bilanciato: media delle due grandezze normalizzate 0–1 nella
 /// zona (0 = migliore), così prezzo e distanza pesano allo stesso modo.

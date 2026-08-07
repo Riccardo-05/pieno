@@ -24,17 +24,21 @@ from .model import Impianto, Prezzo, normalizza_carburante
 # all'italiana, e senza due punti con la data ISO — quindi si accettano entrambe.
 FORMATI_DATA = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d")
 
-# Carburanti per cui si tiene SOLO il prezzo self.
+# Self e servito: si preferisce il self, non si scarta il servito.
 #
-# Per benzina e gasolio il servito è lo stesso prodotto con un sovrapprezzo: confrontarlo
-# con i prezzi self falserebbe la classifica, e il self esiste quasi ovunque (il 95,6%
-# degli impianti ce l'ha), quindi scartarlo costa poco.
+# Il self è il prezzo giusto per confrontare — il servito è lo stesso prodotto con un
+# sovrapprezzo — ed esiste nel 95,6% degli impianti per benzina e gasolio. Ma scartare le
+# righe servito **cancella gli impianti che non hanno alternativa**, e non sono pochi:
 #
-# GPL e metano NO: in Italia si erogano quasi sempre con l'addetto, e `isSelf=0` lì non
-# segnala un sovrapprezzo — è l'unico modo in cui quel prodotto viene venduto. Sul dato
-# reale il self copre 167 impianti GPL su 4.598 e 102 su 1.513 per il metano: applicare
-# anche a loro il filtro cancella il 96% del GPL e il 93% del metano dall'app.
-CARBURANTI_SOLO_SELF = frozenset({"benzina", "gasolio"})
+#   benzina  928 impianti su 21.275 hanno solo il servito
+#   gasolio  927 su 21.308
+#   GPL      4.431 su 4.598  ·  metano  1.411 su 1.513  (si erogano quasi solo con l'addetto)
+#   → 924 impianti sparirebbero del tutto, non avendo nessun prezzo self
+#
+# Un automobilista che ne ha uno sotto casa vedrebbe il nulla, e non è più onesto: è
+# semplicemente meno informativo. Si tiene quindi il servito quando è l'unico prezzo
+# disponibile, e lo si **dichiara** (campo `s` del record, mostrato nella scheda), così
+# chi legge sa che quel numero include il servizio.
 
 
 def _decodifica(dati: bytes, codifica_attesa: str) -> str:
@@ -143,10 +147,9 @@ def applica_prezzi(impianti: Dict[str, Impianto], dati: bytes,
                    codifica_attesa: str = "utf-8", separatore_atteso: str = ";") -> int:
     """Aggiunge i prezzi agli impianti. Ritorna il numero di righe prezzo applicate.
 
-    Regola self/servito (vedi CARBURANTI_SOLO_SELF): per benzina e gasolio si tiene solo
-    il self e le righe servito si scartano; per GPL e metano si accetta anche il servito,
-    perché è quasi sempre l'unica forma in cui vengono venduti. Se per lo stesso
-    impianto+carburante arrivano entrambe, vince il self; a parità, la più recente.
+    Regola self/servito (vedi sopra): vince sempre il self quando c'è; il servito resta
+    solo dove è l'unico prezzo di quel carburante per quell'impianto, ed è dichiarato nel
+    campo `self_service`. A parità di modalità vince la comunicazione più recente.
     """
     testo = _decodifica(dati, codifica_attesa)
     applicati = 0
@@ -162,8 +165,6 @@ def applica_prezzi(impianti: Dict[str, Impianto], dati: bytes,
         if valore is None:
             continue
         is_self = _get(riga, "isSelf") in ("1", "true", "True", "SI", "Si")
-        if not is_self and chiave in CARBURANTI_SOLO_SELF:
-            continue
         nuovo = Prezzo(
             carburante=chiave,
             valore=round(valore, 3),

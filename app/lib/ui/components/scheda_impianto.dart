@@ -60,7 +60,7 @@ class SchedaImpianto extends StatelessWidget {
             const SizedBox(height: 2),
             Text(dist, style: PienoText.valoreDettaglio),
           ],
-          _BadgeApertura(orari: impianto.orari),
+          _BadgeApertura(orari: impianto.orari, servito: !prezzo.selfService),
           const SizedBox(height: 8),
           StelleValutazione(impiantoId: impianto.id),
           const SizedBox(height: 12),
@@ -84,17 +84,23 @@ class SchedaImpianto extends StatelessWidget {
   }
 }
 
-// Badge Aperto/Chiuso da orari OSM. Se l'orario non c'è o non è interpretabile, non
-// mostra nulla (onestà sul dato). L'apertura coincide col servito attivo.
+// Riga di stato sotto l'indirizzo: apertura (da orari OSM) e modalità di erogazione.
+//
+// L'apertura non si mostra se l'orario manca o non è interpretabile (onestà sul dato).
+// «Servito» compare solo quando il prezzo mostrato NON è self: succede dove l'impianto non
+// ha un prezzo self per quel carburante — quasi sempre per GPL e metano, e in circa 900
+// impianti per benzina e gasolio. Chi legge deve sapere che quel numero include il
+// servizio, altrimenti il confronto con gli altri è tra cose diverse.
 class _BadgeApertura extends StatelessWidget {
-  const _BadgeApertura({required this.orari});
+  const _BadgeApertura({required this.orari, this.servito = false});
   final String? orari;
+  final bool servito;
 
   @override
   Widget build(BuildContext context) {
     final info = statoApertura(orari);
     final testo = etichettaApertura(orari);
-    if (testo == null) return const SizedBox.shrink();
+    if (testo == null && !servito) return const SizedBox.shrink();
     final aperto = info.stato == StatoApertura.aperto;
     final colore = aperto ? PienoColors.mentaScura : PienoColors.rame;
     return Padding(
@@ -102,9 +108,16 @@ class _BadgeApertura extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(aperto ? Icons.schedule : Icons.schedule_outlined, size: 15, color: colore),
-          const SizedBox(width: 5),
-          Text(testo, style: PienoText.valoreDettaglio.copyWith(color: colore)),
+          if (testo != null) ...[
+            Icon(aperto ? Icons.schedule : Icons.schedule_outlined,
+                size: 15, color: colore),
+            const SizedBox(width: 5),
+            Text(testo, style: PienoText.valoreDettaglio.copyWith(color: colore)),
+          ],
+          if (testo != null && servito)
+            Text(' · ', style: PienoText.valoreDettaglio),
+          if (servito)
+            Text('Servito', style: PienoText.valoreDettaglio),
         ],
       ),
     );

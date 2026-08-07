@@ -5,8 +5,9 @@ Questi test presidiano due guasti realmente avvenuti in produzione:
 1. La riga "Estrazione del 2026-08-05" (senza due punti) non veniva letta: la pipeline
    ripiegava sull'ora del job, la freschezza confrontava l'orologio con sé stesso e l'app
    dichiarava "aggiornato oggi" un file di due giorni prima.
-2. Scartare tutte le righe servito ha cancellato il 96% degli impianti GPL e il 93% di
-   quelli a metano, che in Italia si erogano quasi sempre con l'addetto.
+2. Scartare le righe servito cancellava gli impianti che non hanno il self: il 96% del
+   GPL, il 93% del metano e 924 impianti spariti del tutto. Ora il servito resta dove è
+   l'unico prezzo, ed è dichiarato.
 """
 import unittest
 from datetime import datetime
@@ -52,9 +53,11 @@ class TestSelfEServito(unittest.TestCase):
         )
         return impianti
 
-    def test_benzina_servita_scartata(self):
+    def test_benzina_solo_servita_viene_tenuta_e_dichiarata(self):
+        # 928 impianti hanno solo il servito per la benzina: scartarli li faceva sparire.
         imp = self._prezzi("1;Benzina;2.499;0;05/08/2026 08:00:00\n")
-        self.assertNotIn("benzina", imp["1"].prezzi)
+        self.assertEqual(imp["1"].prezzi["benzina"].valore, 2.499)
+        self.assertFalse(imp["1"].prezzi["benzina"].self_service)
 
     def test_benzina_tiene_il_self_anche_se_arriva_dopo_il_servito(self):
         imp = self._prezzi(

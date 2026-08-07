@@ -16,7 +16,9 @@ Stile mappa, marcatori, handoff, Ferrostar (pagine 6, 9 e 13 del documento di pr
 - Il prezzo è il marcatore. Nessuna icona di pompa: il numero è l'informazione, disegnato in un layer con gestione delle collisioni, non come widget, oltre i 50 elementi.
 - **Il selezionato è in inchiostro.** L'impianto aperto nel foglio si distingue con una pillola in inchiostro pieno, la più grande di tutte, con alone e sottile anello bianco. L'inchiostro è già il colore della «voce selezionata» (pag. 4) ed è l'unico scuro sulla mappa chiara: non introduce tinte nuove e si trova a colpo d'occhio. Quando un impianto è insieme il più conveniente e il selezionato, vince la selezione: si disegna una sola pillola.
 - Il marcatore selezionato **non cede mai il posto alle collisioni** e sta sopra tutti gli altri: è quello di cui l'utente sta leggendo la scheda.
-- Selezionando dall'elenco, la mappa porta l'impianto in vista **solo se è fuori schermo**: chi tocca un marcatore non deve vedersi scappare la mappa sotto il dito.
+- **Toccando un marcatore** la mappa porta l'impianto in vista solo se è fuori schermo: non deve scappare sotto il dito di chi l'ha appena toccato. Il foglio si apre all'altezza di riposo se era più in basso.
+- **Selezionando dall'elenco** (o da un'alternativa in «Vicino a te») vale il contrario: l'utente non stava guardando la mappa, quindi il marcatore va portato al **centro della fascia di mappa che resterà scoperta**, e il foglio riportato all'altezza di riposo — se resta alto copre il punto che si è appena chiesto di vedere.
+- **Zoom di partenza** appena sopra la soglia dei raggruppamenti: all'apertura si leggono i prezzi dei singoli impianti, e i cluster ricompaiono allargando di poco.
 - Raggruppamento sotto lo zoom 12 mostrando il minimo della zona, non il conteggio: «da 2,059» dice qualcosa, «14 impianti» no.
 
 ## Il foglio dei prezzi
@@ -24,7 +26,7 @@ Stile mappa, marcatori, handoff, Ferrostar (pagine 6, 9 e 13 del documento di pr
 Il foglio è un pannello **sovrapposto** alla mappa, fatto di due pezzi che vanno tenuti distinti — è la loro confusione a generare i difetti visibili (contenuto che scivola scoprendo lo sfondo, prese che funzionano a intermittenza).
 
 - **Box.** Il pannello: tre altezze, 0,30 · 0,46 (riposo) · 0,92 di schermo. La **maniglia è chrome del box**, non un elemento della lista: non scorre via col contenuto.
-- **Lista.** Il contenuto scorrevole dentro il box, ritagliato da esso: scheda dell'impianto selezionato, occhiello, poi le righe. **Massimo 35 righe**: oltre, nessuno scorre e il foglio diventa un muro di numeri — il resto della provincia si guarda sulla mappa, che è la sua rappresentazione. L'occhiello dichiara sempre quante righe mostra («I PRIMI 35 IMPIANTI»), mai «tutti» su un elenco tagliato.
+- **Lista.** Il contenuto scorrevole dentro il box, ritagliato da esso: scheda dell'impianto selezionato, occhiello **«ALTRE STAZIONI»**, poi le righe — che escludono l'impianto già mostrato nella scheda, altrimenti «altre» sarebbe falso. **Massimo 35 righe**: oltre, nessuno scorre e il foglio diventa un muro di numeri — il resto della provincia si guarda sulla mappa, che è la sua rappresentazione. L'occhiello dichiara sempre quante righe mostra («I PRIMI 35 IMPIANTI»), mai «tutti» su un elenco tagliato.
 
 Regole di gesto, entrambe scritte perché la coppia box + lista non ha un comportamento ovvio:
 

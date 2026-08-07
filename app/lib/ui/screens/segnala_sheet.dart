@@ -96,11 +96,6 @@ class _SegnalaFormState extends ConsumerState<_SegnalaForm> {
             ),
             const SizedBox(height: 18),
             BottonePrimario(testo: 'Invia segnalazione', onTap: _invia, altezza: 56),
-            const SizedBox(height: 8),
-            Text(
-              'La segnalazione resta sul dispositivo e verrà inviata quando il servizio dati sarà attivo.',
-              style: PienoText.valoreDettaglio,
-            ),
           ],
         ),
       ),

@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/local_store.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../models/navigatore.dart';
@@ -17,7 +16,6 @@ import '../components/ordinamento_shortcut.dart';
 import '../components/sfondo_aurore.dart';
 import '../components/vetro.dart';
 import 'accesso_screen.dart';
-import 'segnala_sheet.dart';
 
 class ImpostazioniScreen extends ConsumerWidget {
   const ImpostazioniScreen({super.key});
@@ -166,9 +164,12 @@ class ImpostazioniScreen extends ConsumerWidget {
   }
 
   // 4 — Mappa e navigazione: "Apri con", avvisi sul percorso.
+  // «Avvisi sul percorso» non c'è: doveva segnalare una stazione più conveniente lungo la
+  // strada mentre la decisione è ancora aperta (07-mappa-e-navigazione.md), e richiede il
+  // percorso — Fase 5 — più le notifiche, cioè un backend. Finché non esistono, un
+  // interruttore che si accende senza fare nulla promette una funzione che non c'è.
   Widget _gruppoNavigazione(BuildContext context, WidgetRef ref) {
     final nav = ref.watch(navigatoreProvider);
-    final avvisi = ref.watch(avvisiPercorsoProvider);
     return _Gruppo(
       titolo: 'MAPPA E NAVIGAZIONE',
       figli: [
@@ -177,58 +178,22 @@ class ImpostazioniScreen extends ConsumerWidget {
           valore: nav.etichetta,
           onTap: () => _scegliNavigatore(context, ref, nav),
         ),
-        _Riga(
-          titolo: 'Avvisi sul percorso',
-          trailing: Switch(
-            value: avvisi,
-            activeColor: Colors.white,
-            activeTrackColor: PienoColors.mentaScuraGrad,
-            onChanged: (v) => ref.read(avvisiPercorsoProvider.notifier).state = v,
-          ),
-        ),
       ],
     );
   }
 
-  // 5 — Dati: segnalazione, fonte, ultimo aggiornamento, permessi, dati locali (pag. 8).
+  // 5 — Dati: fonte, ultimo aggiornamento, permessi di posizione.
+  //
+  // Qui NON c'è più la segnalazione del prezzo errato: è un'azione su un impianto
+  // preciso e vive dov'è quell'impianto, cioè nella sua scheda. Metterla nelle
+  // impostazioni obbligava a indovinare a quale impianto si riferisse.
   Widget _gruppoDati(BuildContext context, WidgetRef ref) {
-    final carburante = ref.watch(carburanteProvider);
-    final elenco = ref.watch(elencoProvider);
-    final selId = ref.watch(selezionatoProvider);
-    // Quale impianto si segnala: quello selezionato; in mancanza, il primo dell'elenco
-    // (il più conveniente, quello mostrato in cima). Il nome è scritto nella riga, così
-    // non si segnala mai un impianto a caso senza saperlo.
-    final imp = elenco.isEmpty
-        ? null
-        : elenco.firstWhere((i) => i.id == selId, orElse: () => elenco.first);
-
     return _Gruppo(
       titolo: 'DATI',
       figli: [
-        _Riga(
-          titolo: 'Segnala un prezzo errato',
-          sottotitolo: imp == null
-              ? null
-              : (imp.nome.isNotEmpty ? imp.nome : imp.marchio),
-          coloreTitolo: PienoColors.mentaScura,
-          onTap: () {
-            if (imp == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Apri un impianto per segnalarne il prezzo.')),
-              );
-              return;
-            }
-            mostraSegnala(context, imp, imp.prezzoDi(carburante)!.valore);
-          },
-        ),
         const _Riga(titolo: 'Fonte dei dati', valore: 'MIMIT · IODL 2.0'),
         _Riga(titolo: 'Ultimo aggiornamento', valore: _ultimoAggiornamento(ref)),
         const _RigaPosizione(),
-        _Riga(
-          titolo: 'Cancella i dati salvati',
-          coloreTitolo: PienoColors.rame,
-          onTap: () => _cancellaDatiLocali(context, ref),
-        ),
       ],
     );
   }
@@ -245,38 +210,6 @@ class ImpostazioniScreen extends ConsumerWidget {
 
   /// Cancella zone salvate, preferenze, segnalazioni e valutazioni: quanto promesso
   /// dall'informativa privacy, senza dover disinstallare l'app.
-  Future<void> _cancellaDatiLocali(BuildContext context, WidgetRef ref) async {
-    final conferma = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cancellare i dati salvati?'),
-        content: Text(
-          'Vengono rimossi dal telefono le zone scaricate, le preferenze, le '
-          'segnalazioni in attesa e le tue valutazioni. I prezzi si riscaricano da soli.',
-          style: PienoText.valoreDettaglio,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cancella', style: TextStyle(color: PienoColors.rame)),
-          ),
-        ],
-      ),
-    );
-    if (conferma != true) return;
-
-    await LocalStore().svuota();
-    await ref.read(prefsProvider).clear();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dati cancellati. Riavvia l\'app per ripartire da zero.')),
-    );
-  }
-
   Future<void> _scegliNavigatore(BuildContext context, WidgetRef ref, Navigatore attuale) async {
     final scelto = await showModalBottomSheet<Navigatore>(
       context: context,
@@ -374,7 +307,6 @@ class _Riga extends StatelessWidget {
     this.onTap,
     this.avatar,
     this.altezza = PienoSizes.rigaImpostazione,
-    this.coloreTitolo = PienoColors.inchiostro,
   });
 
   final String titolo;
@@ -384,7 +316,6 @@ class _Riga extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? avatar;
   final double altezza;
-  final Color coloreTitolo;
 
   @override
   Widget build(BuildContext context) {
@@ -401,7 +332,7 @@ class _Riga extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(titolo, style: PienoText.voceImpostazione.copyWith(color: coloreTitolo)),
+                  Text(titolo, style: PienoText.voceImpostazione),
                   if (sottotitolo != null)
                     Text(sottotitolo!, style: PienoText.valoreDettaglio),
                 ],
