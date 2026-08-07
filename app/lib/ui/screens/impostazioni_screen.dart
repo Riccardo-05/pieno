@@ -29,7 +29,13 @@ class ImpostazioniScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: SfondoAurore(
+        // bottom: false — con la safe area inferiore attiva il riquadro scorrevole finisce
+        // sopra l'indicatore di sistema, e l'ultimo gruppo risulta tagliato invece di
+        // scorrere fino al bordo. Lo spazio va restituito come padding DENTRO la lista:
+        // così il contenuto arriva in fondo allo schermo e a riposo resta comunque sopra
+        // l'indicatore.
         child: SafeArea(
+          bottom: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: PienoSpacing.margineScheda),
             child: Column(
@@ -38,7 +44,8 @@ class ImpostazioniScreen extends ConsumerWidget {
                 _intestazione(context),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.only(bottom: 30),
+                    padding: EdgeInsets.only(
+                        bottom: 30 + MediaQuery.of(context).padding.bottom),
                     children: [
                       _testataAccount(context),
                       _gruppoRifornimento(ref),
