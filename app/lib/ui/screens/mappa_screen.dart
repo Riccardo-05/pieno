@@ -638,14 +638,30 @@ class _MappaScreenState extends ConsumerState<MappaScreen> {
   }
 
   /// Attribuzione obbligatoria e comandi tondi: stanno appena sopra il bordo del
-  /// foglio e ne seguono l'altezza. In un Consumer isolato, così la mappa non si
-  /// ridisegna a ogni frame del trascinamento. Sfumano quando il foglio è quasi
-  /// aperto, quindi disegnarli sopra di esso non li fa mai finire sulla lista.
+  /// foglio e ne seguono l'altezza.
+  ///
+  /// L'altezza la chiedono **al foglio**, non a un provider che la ricopia. È la
+  /// differenza che conta, e non è un dettaglio di stile:
+  ///
+  /// - `foglioExtentProvider` è una *seconda* verità, aggiornata da una notifica.
+  ///   Finché la prima notifica non arriva vale il suo valore iniziale, che può
+  ///   non corrispondere a dove il foglio si è davvero aperto: è così che il
+  ///   bottone finiva dentro la scheda appena avviata l'app.
+  /// - Quella notifica viene spedita **durante il layout**, quindi aggiorna il
+  ///   provider per il frame successivo: durante un trascinamento veloce i
+  ///   comandi restavano indietro di un fotogramma.
+  ///
+  /// `_sheetController` invece è il foglio: `size` è la sua posizione vera, e
+  /// notifica dentro il gestore del gesto, cioè **prima** della fase di build.
+  /// Comandi e foglio si ridisegnano nello stesso frame, sempre allineati.
   Widget _controlliBasso() {
-    return Consumer(
-      builder: (context, ref, _) {
+    return ListenableBuilder(
+      listenable: _sheetController,
+      builder: (context, _) {
         final h = MediaQuery.of(context).size.height;
-        final ext = ref.watch(foglioExtentProvider);
+        // isAttached è falso solo nel primissimo frame, prima che il foglio si
+        // agganci: lì l'altezza di partenza è quella dichiarata, non una copia.
+        final ext = _sheetController.isAttached ? _sheetController.size : _foglioMedio;
         final sopraFoglio = h * ext + 12;
         final espanso = ext > 0.66; // foglio quasi aperto: i comandi bassi sfumano
         return Stack(

@@ -51,6 +51,7 @@ Dove il progetto si discosta dal documento di partenza, la deviazione è **dichi
 | Prezzi **solo self**, orari da OpenStreetMap | `05-dati-e-qualita.md` | non previsto dal PDF |
 | Switch flottante **fermo in fondo** e uguale nelle due viste | `03-schermate.md` | sopra il foglio, in dissolvenza |
 | Fino a **cinque** alternative, e sono toccabili | `01-principi-ux.md`, `03-schermate.md` | massimo tre |
+| Altezza di riposo del foglio mappa a **0,52** | `07-mappa-e-navigazione.md` | 0,46 |
 
 Gli scarti che restano **da definire** (non inventati) sono invece elencati dove servono: settima regola di validazione e confini comunali ISTAT in `05-dati-e-qualita.md`.
 
