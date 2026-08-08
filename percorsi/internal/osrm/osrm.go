@@ -17,6 +17,15 @@ import (
 	"github.com/riccardo-05/pieno/percorsi/internal/motore"
 )
 
+// maxRisposta è quanto si è disposti a leggere dal motore. Una tabella verso cento
+// destinazioni sta in poche decine di KB e un percorso con geometria in qualche
+// centinaio: otto megabyte sono larghi per qualunque risposta sensata e stretti
+// abbastanza da non lasciare che una risposta impazzita riempia la memoria.
+//
+// Il corpo delle richieste che *arrivano* era già limitato; quello delle risposte no,
+// e non c'era ragione per l'asimmetria.
+const maxRisposta = 8 << 20
+
 // Client è un motore di instradamento OSRM raggiungibile via HTTP.
 type Client struct {
 	base    string
@@ -143,7 +152,7 @@ func (c *Client) chiedi(ctx context.Context, indirizzo string, dentro any) error
 		}
 		return fmt.Errorf("il motore ha risposto %d", risp.StatusCode)
 	}
-	if err := json.NewDecoder(risp.Body).Decode(dentro); err != nil {
+	if err := json.NewDecoder(io.LimitReader(risp.Body, maxRisposta)).Decode(dentro); err != nil {
 		return fmt.Errorf("risposta del motore illeggibile: %w", err)
 	}
 	return nil

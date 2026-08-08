@@ -30,9 +30,12 @@ precisione che cosa succede — perché è poco:
   Nient'altro: nessun identificativo, nessun account, nessun cookie.
 - Le coordinate **non vengono registrate**. Nei log finiscono soltanto conteggi e tempi di
   risposta.
-- Per non rifare due volte lo stesso calcolo, il servizio tiene in memoria una cache con
-  le coordinate **arrotondate a circa 100 metri**: la chiave non è mai la posizione esatta
-  di qualcuno. La cache sta in memoria, non su disco, e sparisce quando il servizio si ferma.
+- La posizione viene **arrotondata a circa 100 metri appena arriva**, prima di qualunque
+  calcolo: il motore che traccia le strade non riceve mai la tua posizione esatta, solo la
+  cella in cui ti trovi. Entro cento metri la strada da prendere è la stessa, quindi non
+  perdi niente in precisione.
+- Sulla stessa cella si appoggia la cache che evita di rifare due volte lo stesso calcolo.
+  Sta in memoria, non su disco, e sparisce quando il servizio si ferma.
 - Per difendersi dagli abusi il servizio conta le richieste per client. Non conserva
   l'indirizzo IP: ne tiene un'**impronta con un numero casuale** che cambia a ogni riavvio.
 - Il servizio può essere spento (di notte lo è). Quando non risponde, l'app **ricade sulla

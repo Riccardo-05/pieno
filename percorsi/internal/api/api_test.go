@@ -238,6 +238,56 @@ func TestIntestazioneDelProxyCredutaDalProxy(t *testing.T) {
 	}
 }
 
+// motoreSpia ricorda le coordinate che gli sono arrivate: serve a verificare che
+// al motore non finisca la posizione esatta di nessuno.
+type motoreSpia struct {
+	motoreFinto
+	origine      geo.Punto
+	destinazioni []geo.Punto
+}
+
+func (m *motoreSpia) Tabella(ctx context.Context, origine geo.Punto, destinazioni []geo.Punto) ([]motore.Tratta, error) {
+	m.origine = origine
+	m.destinazioni = append([]geo.Punto(nil), destinazioni...)
+	return m.motoreFinto.Tabella(ctx, origine, destinazioni)
+}
+
+// L'informativa dice che la posizione serve a calcolare le distanze, e la cache
+// lavora gia' su celle di ~100 m. Passare al motore la coordinata al centimetro non
+// aggiunge precisione utile — entro cento metri la strada e' la stessa — e tiene in
+// giro una posizione piu' precisa di quanto serva.
+func TestAlMotoreNonArrivaLaPosizioneEsatta(t *testing.T) {
+	m := &motoreSpia{motoreFinto: motoreFinto{vivo: true}}
+	h := servizioDiProva(t, m, Config{})
+
+	chiama(t, h, http.MethodPost, "/v1/distanze",
+		`{"origine":{"lat":45.46412345,"lon":9.19016789},"destinazioni":[{"lat":45.47812345,"lon":9.22706789}]}`)
+
+	if m.origine != (geo.Punto{Lat: 45.464, Lon: 9.19}) {
+		t.Fatalf("origine passata al motore = %+v, attesa la cella arrotondata", m.origine)
+	}
+	if len(m.destinazioni) != 1 || m.destinazioni[0] != (geo.Punto{Lat: 45.478, Lon: 9.227}) {
+		t.Fatalf("destinazioni passate al motore = %+v", m.destinazioni)
+	}
+}
+
+// Due posizioni nella stessa cella devono dare la stessa risposta: era gia' cosi'
+// grazie alla cache, ora lo e' anche alla prima richiesta.
+func TestStessaCellaStessoPercorso(t *testing.T) {
+	m := &motoreSpia{motoreFinto: motoreFinto{vivo: true}}
+	h := servizioDiProva(t, m, Config{})
+
+	chiama(t, h, http.MethodPost, "/v1/distanze",
+		`{"origine":{"lat":45.46401,"lon":9.19001},"destinazioni":[{"lat":45.478,"lon":9.227}]}`)
+	prima := m.origine
+	chiama(t, h, http.MethodPost, "/v1/distanze",
+		`{"origine":{"lat":45.46404,"lon":9.19004},"destinazioni":[{"lat":45.478,"lon":9.227}]}`)
+
+	if m.origine != prima {
+		t.Fatalf("stessa cella ma origini diverse: %+v e %+v", prima, m.origine)
+	}
+}
+
 func TestSaluteDiceVersioneEUptime(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "versione-grafo.txt")
 	if err := os.WriteFile(file, []byte("prova · 2026-08-07\n"), 0o600); err != nil {

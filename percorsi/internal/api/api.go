@@ -167,14 +167,25 @@ func (s *Servizio) distanze(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Si lavora sulla cella di ~100 m, non sul punto esatto. La cache lo faceva
+	// gia' per la chiave; farlo anche qui significa che **al motore non arriva mai
+	// la posizione precisa di nessuno**, e che due richieste dallo stesso isolato
+	// ottengono la stessa risposta anche la prima volta. Non si perde niente di
+	// utile: entro cento metri la strada da prendere e' la stessa.
+	origine := req.Origine.Arrotonda()
+	destinazioni := make([]geo.Punto, len(req.Destinazioni))
+	for i, d := range req.Destinazioni {
+		destinazioni[i] = d.Arrotonda()
+	}
+
 	// La cache lavora per coppia, non per richiesta intera: due utenti nello
 	// stesso isolato che guardano impianti diversi si aiutano comunque.
-	esiti := make([]motore.Tratta, len(req.Destinazioni))
+	esiti := make([]motore.Tratta, len(destinazioni))
 	var mancanti []geo.Punto
 	var indiciMancanti []int
 
-	for i, d := range req.Destinazioni {
-		if t, trovata := s.tratte.Prendi(geo.ChiaveCoppia(req.Origine, d)); trovata {
+	for i, d := range destinazioni {
+		if t, trovata := s.tratte.Prendi(geo.ChiaveCoppia(origine, d)); trovata {
 			esiti[i] = t
 			continue
 		}
@@ -183,24 +194,24 @@ func (s *Servizio) distanze(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(mancanti) > 0 {
-		tratte, err := s.motore.Tabella(r.Context(), req.Origine, mancanti)
+		tratte, err := s.motore.Tabella(r.Context(), origine, mancanti)
 		if err == nil && len(tratte) != len(mancanti) {
 			err = errors.New("il motore ha risposto con un numero di tratte diverso dal richiesto")
 		}
 		if err != nil {
-			s.motoreInDifficolta(w, err, nessunaRaggiungibile(len(req.Destinazioni)))
+			s.motoreInDifficolta(w, err, nessunaRaggiungibile(len(destinazioni)))
 			return
 		}
 		for k, t := range tratte {
 			i := indiciMancanti[k]
 			esiti[i] = t
-			s.tratte.Metti(geo.ChiaveCoppia(req.Origine, req.Destinazioni[i]), t)
+			s.tratte.Metti(geo.ChiaveCoppia(origine, destinazioni[i]), t)
 		}
 	}
 
 	risposta := rispostaDistanze{
 		Distanze:  make([]Distanza, len(esiti)),
-		DaCache:   len(req.Destinazioni) - len(mancanti),
+		DaCache:   len(destinazioni) - len(mancanti),
 		DalMotore: len(mancanti),
 	}
 	for i, t := range esiti {
@@ -229,6 +240,9 @@ func (s *Servizio) percorso(w http.ResponseWriter, r *http.Request) {
 		scriviErrore(w, http.StatusBadRequest, "destinazione_non_valida", "destinazione: "+err.Error())
 		return
 	}
+
+	// Stessa regola di /v1/distanze: al motore va la cella, non il punto esatto.
+	origine, destinazione = origine.Arrotonda(), destinazione.Arrotonda()
 
 	chiave := geo.ChiaveCoppia(origine, destinazione)
 	p, inCache := s.percorsi.Prendi(chiave)

@@ -81,13 +81,19 @@ Chiuso l'8 agosto 2026. 49 test nella pipeline, verdi.
 
 ## Gruppo 4 · Privacy e superficie del servizio percorsi
 
-- [ ] **4.1 — La posizione esatta arriva al motore.** Il servizio arrotonda a ~100 m solo
-  per la *chiave di cache*; le coordinate girate a OSRM sono quelle precise. Arrotondare
-  anche in ingresso costa poco e rende l'informativa privacy letteralmente vera invece
-  che quasi.
-- [ ] **4.2 — Nessun tetto sulla risposta del motore.** `MaxBytesReader` protegge la
-  richiesta in ingresso; la risposta di OSRM si legge senza limiti. Rischio basso — il
-  motore è in casa — ma è un'asimmetria che non ha ragione di esserci.
+- [x] **4.1 — La posizione esatta non arriva più al motore.** Origine e destinazioni si
+  arrotondano alla cella di ~100 m **prima** di interrogare OSRM, su entrambe le rotte.
+  Non si perde nulla di utile — entro cento metri la strada da prendere è la stessa — e
+  in cambio due richieste dallo stesso isolato ricevono la stessa risposta anche alla
+  prima chiamata, non solo quando la cache ha già colpito.
+- [x] **4.2 — Tetto sulla risposta del motore.** `io.LimitReader` a 8 MB: largo per
+  qualunque risposta sensata (una tabella verso cento destinazioni sta in poche decine
+  di KB), stretto abbastanza da fermare una risposta impazzita. Il primo tentativo di
+  test non discriminava — un JSON troncato dà errore comunque — quindi il test manda un
+  JSON **valido** con dentro 40 MB di zavorra: prima veniva letto e decodificato tutto
+  senza un lamento. Sono anche i primi test del package `osrm`.
+
+Chiuso l'8 agosto 2026.
 
 ## Gruppo 5 · Lavori grossi, da affrontare a sé
 
@@ -109,3 +115,5 @@ Chiuso l'8 agosto 2026. 49 test nella pipeline, verdi.
 | 8 ago 2026 | Gruppo 1 · integrità e scaricamento condizionale | ✅ 4 voci su 4, 74 test verdi |
 | 8 ago 2026 | Gruppo 2 · i guasti si fanno sentire | ✅ 3 voci su 3, 45 test verdi in tre fusi |
 | 8 ago 2026 | Gruppo 3 · la pipeline gira su Windows | ✅ 2 voci su 2, provate sul campo |
+| 8 ago 2026 | Gruppo 4 · privacy e superficie del servizio | ✅ 2 voci su 2 |
+| — | Gruppo 5 · lavori grossi | ⬜ da affrontare a sé, uno per volta |
