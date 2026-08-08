@@ -16,6 +16,7 @@ permissions:
   contents: read
   pages: write           # per pubblicare su GitHub Pages
   id-token: write        # richiesto da actions/deploy-pages
+  issues: write          # per aprire l'avviso quando il job fallisce
 
 concurrency:
   group: dati-notturno
@@ -59,6 +60,66 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: data-pipeline/build/public
+
+  # Un job che fallisce in silenzio e' un job che non c'e'. Il 6 agosto 2026 il notturno
+  # e' saltato e ce ne siamo accorti giorni dopo, per caso, guardando altro: i dati erano
+  # fermi e l'app continuava a servirli senza che nessuno lo sapesse.
+  #
+  # L'avviso e' una issue, non una mail: non serve configurare niente, resta nel
+  # repository accanto al lavoro, e si chiude quando il problema e' risolto. Se ce n'e'
+  # gia' una aperta si aggiunge un commento invece di aprirne una nuova, altrimenti dopo
+  # una settimana di guasto ci sarebbero sette issue identiche e nessuno le leggerebbe
+  # piu'.
+  avvisa:
+    needs: [costruisci, pubblica]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apri o aggiorna l'avviso
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const etichetta = 'job-notturno';
+            const titolo = 'Il job notturno dei dati non e\' andato a buon fine';
+            const corpo = [
+              `Esecuzione fallita: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `Avviata da: \`${context.eventName}\``,
+              '',
+              'Finche\' non riparte, l\'app continua a servire l\'ultima build valida,',
+              'dichiarandone l\'eta\': nessuno vede una schermata vuota, ma i prezzi',
+              'invecchiano. Due cause gia\' viste, da escludere per prime:',
+              '',
+              '- il file ministeriale e\' oltre le 48 h e la pubblicazione si e\' bloccata',
+              '  da se\' (lanciandolo a mano dopo mezzanotte succede sempre);',
+              '- Overpass non ha risposto e il passo orari e\' andato in timeout.',
+              '',
+              'Il dettaglio sta nel report di qualita\' fra gli artefatti del run.',
+            ].join('\n');
+
+            const aperte = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: etichetta,
+            });
+
+            if (aperte.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: aperte.data[0].number,
+                body: corpo,
+              });
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: titolo,
+              body: corpo,
+              labels: [etichetta],
+            });
 
   # Pubblicazione su GitHub Pages (CDN gratuita, nessun server da gestire).
   # Richiede: Settings -> Pages -> Source = "GitHub Actions" (una volta sola).

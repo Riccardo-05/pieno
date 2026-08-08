@@ -14,12 +14,28 @@ Esecuzione tipica (Roadmap 01, esito: "un URL pubblico con dati puliti e datati"
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 
 from . import build, orari, parsing, report, sources, validation
 from .config import carica
 from .geo import ConfiniComunali
+
+
+def avvisa(messaggio: str) -> None:
+    """Un avviso che si vede anche quando nessuno sta leggendo il log.
+
+    In CI diventa un'annotazione di GitHub, che compare in cima al run invece di
+    perdersi fra mille righe. Gli avvisi che nessuno legge non esistono: quando lo
+    storico manca, per esempio, la regola R4 non scatta e tutti i salti di prezzo
+    passano — il job però riesce, e senza qualcosa che salti all'occhio la cosa resta
+    invisibile finché non se ne accorge qualcuno alla pompa.
+    """
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::warning::{messaggio}", file=sys.stderr)
+    else:
+        print(f"Attenzione: {messaggio}", file=sys.stderr)
 
 
 def esegui(args: argparse.Namespace) -> int:
@@ -44,11 +60,10 @@ def esegui(args: argparse.Namespace) -> int:
     data_letta = data_dato is not None
     if not data_letta:
         data_dato = datetime.now(timezone.utc).replace(tzinfo=None)
-        print(
-            "Attenzione: data di estrazione non leggibile dalla prima riga dei CSV. "
-            "Si ripiega sull'ora del job: la misura di freschezza NON è attendibile "
-            "(vedi 'data_dato_letta' nel report).",
-            file=sys.stderr,
+        avvisa(
+            "data di estrazione non leggibile dalla prima riga dei CSV. Si ripiega "
+            "sull'ora del job: la misura di freschezza NON è attendibile "
+            "(vedi 'data_dato_letta' nel report)."
         )
     impianti = parsing.leggi_anagrafica(raw_ana, s_ana.codifica_attesa, s_ana.separatore_atteso)
     n_prezzi = parsing.applica_prezzi(impianti, raw_pre, s_pre.codifica_attesa, s_pre.separatore_atteso)
@@ -74,7 +89,7 @@ def esegui(args: argparse.Namespace) -> int:
                         n += 1
             print(f"Orari OSM: abbinati {n}/{len(impianti)} impianti (su {len(punti)} POI con orario).")
         except Exception as e:  # noqa: BLE001 — best-effort: non deve bloccare la build
-            print(f"Orari OSM non disponibili ({e}): si prosegue senza.", file=sys.stderr)
+            avvisa(f"orari OSM non disponibili ({e}): si prosegue senza.")
 
     # --- report --------------------------------------------------------------------
     ver = build.versione(data_dato)
@@ -82,8 +97,8 @@ def esegui(args: argparse.Namespace) -> int:
                         data_letta=data_letta)
     print(f"Mostrati {rep['mostrati']} · scartati {rep['scartati']} · quarantena {rep['in_quarantena']}")
     if not rep["misure_di_controllo"]["storico_disponibile"]:
-        print("Attenzione: nessuna build precedente trovata → la regola R4 (salto in 24 h) "
-              "non è stata applicata.", file=sys.stderr)
+        avvisa("nessuna build precedente trovata: la regola R4 (salto in 24 h) non è "
+               "stata applicata, quindi oggi nessun salto di prezzo è stato fermato.")
     m = rep["misure_di_controllo"]
     print(f"Età del file: {m['eta_file_ore']} h (limite {m['eta_massima_file_ore']:.0f} h) "
           f"→ esito {rep['esito_pubblicazione']}")
@@ -93,8 +108,8 @@ def esegui(args: argparse.Namespace) -> int:
     # non c'è, i record escono senza `fs` e l'app resta alla stima in linea d'aria.
     fattori = build.carica_fattori(args.fattori)
     if args.fattori and not fattori:
-        print(f"Attenzione: nessun fattore stradale letto da {args.fattori} → le distanze "
-              "stimate resteranno in linea d'aria.", file=sys.stderr)
+        avvisa(f"nessun fattore stradale letto da {args.fattori}: le distanze stimate "
+               "resteranno in linea d'aria.")
 
     # --- pubblicazione atomica (solo se il report supera le soglie) ----------------
     if rep["esito_pubblicazione"] != "ok" and not args.forza:

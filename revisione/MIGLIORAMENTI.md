@@ -44,16 +44,24 @@ che è cambiato.
 
 ## Gruppo 2 · I guasti devono farsi sentire
 
-- [ ] **2.1 — Allarme quando il job notturno fallisce.** Oggi non esiste niente: nessun
-  `if: failure()` nel workflow. Il job del 6 agosto è saltato e ce ne siamo accorti per
-  caso, guardando altro. Un job che fallisce in silenzio è un job che non c'è.
-- [ ] **2.2 — `test_validation.py` non deve più dipendere dall'orologio.** `OGGI =
-  datetime.now()` alla riga 15: è **esattamente** il difetto che ha bloccato la
-  pubblicazione del 6 agosto (I3 in REVISIONE), ed è ancora lì. Nel registro è H2,
-  indicato come priorità 1.
-- [ ] **2.3 — Lo storico che scade in silenzio.** La cache di GitHub Actions dura sette
-  giorni: se il repo resta fermo, R4 riparte da zero e non scatta. Il report lo dichiara
-  (`storico_disponibile`), ma nessuno legge il report — si chiude con 2.1.
+- [x] **2.1 — Allarme quando il job notturno fallisce.** Job `avvisa` con `if:
+  failure()`: apre una issue etichettata `job-notturno`, o commenta quella già aperta —
+  altrimenti dopo una settimana di guasto ci sarebbero sette issue identiche e nessuno
+  le leggerebbe più. L'avviso è una issue e non una mail perché non c'è niente da
+  configurare, resta accanto al lavoro e si chiude quando il problema è risolto.
+- [x] **2.2 — `test_validation.py` non dipende più dall'orologio.** La causa vera stava
+  nel codice, non nel test: `report.genera` misurava la freschezza solo sull'orologio di
+  sistema, quindi i test *dovevano* ancorarsi a `datetime.now()` per non far risultare
+  scaduto il file di prova. Ora l'istante si inietta (`adesso=`), e le date dei test sono
+  ferme. **Controprova:** i 45 test passano identici con `TZ` locale, `UTC` e
+  `Pacific/Auckland` — prima era proprio il fuso del runner a farli cadere.
+- [x] **2.3 — Lo storico che scade in silenzio.** Nuova `pipeline.avvisa()`: in CI gli
+  avvisi diventano annotazioni GitHub (`::warning::`), che compaiono in cima al run
+  invece di perdersi nel log. Applicata ai quattro punti dove la pipeline segnalava
+  qualcosa e proseguiva: storico assente, data non leggibile, orari OSM giù, fattori
+  stradali mancanti.
+
+Chiuso l'8 agosto 2026. 45 test nella pipeline, verdi in tre fusi orari.
 
 ## Gruppo 3 · La pipeline deve girare sulla macchina di chi la scrive
 
@@ -93,3 +101,4 @@ che è cambiato.
 | Quando | Cosa | Esito |
 | --- | --- | --- |
 | 8 ago 2026 | Gruppo 1 · integrità e scaricamento condizionale | ✅ 4 voci su 4, 74 test verdi |
+| 8 ago 2026 | Gruppo 2 · i guasti si fanno sentire | ✅ 3 voci su 3, 45 test verdi in tre fusi |

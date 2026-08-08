@@ -4,17 +4,18 @@
 - il rilevamento del separatore, unica euristica fra la fonte e tutto il resto;
 - lo scambio finale, che per un istante lasciava la cartella pubblica inesistente.
 """
+import io
 import json
 import time
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 
-from pieno_pipeline import build, parsing, sources
+from pieno_pipeline import build, parsing, pipeline, report, sources
 from pieno_pipeline.model import Impianto, Prezzo
-from pieno_pipeline.validation import _deduplica, valida
+from pieno_pipeline.validation import REGOLE, _deduplica, valida
 
 
 def imp(idi: str, lat: float, lon: float, marchio: str = "Eni") -> Impianto:
@@ -303,6 +304,85 @@ class TestConfiniDiProvincia(unittest.TestCase):
         self.assertAlmostEqual(riquadro["latMax"], 45.50)
         self.assertAlmostEqual(riquadro["lonMin"], 9.10)
         self.assertAlmostEqual(riquadro["lonMax"], 9.30)
+
+
+class TestOrologioIniettabile(unittest.TestCase):
+    """Il report deve poter essere messo alla prova senza dipendere da che ore sono.
+
+    Finché l'unico «adesso» era l'orologio di sistema, i test dovevano ancorarsi a
+    `datetime.now()` per non far risultare vecchissimo il file di prova. Il risultato
+    dipendeva quindi dal fuso della macchina: è così che il job del 6 agosto 2026 è
+    fallito in CI (runner in UTC, freschezza misurata in ora italiana) mentre in locale
+    passava.
+    """
+
+    def _cfg(self):
+        cfg = mock.Mock()
+        cfg.qualita.eta_massima_file_ore = 48
+        cfg.qualita.freschezza_target_pct = 85
+        cfg.qualita.impianti_senza_eta_ammessi = 0
+        cfg.qualita.scarto_mediano_target_eur_litro = 0.01
+        cfg.qualita.segnalazioni_target_permille = 5
+        cfg.validazione.eta_massima_giorni = 30
+        return cfg
+
+    def _impianto(self, quando):
+        i = imp("1001", 45.4640, 9.1900)
+        i.prezzi["benzina"] = Prezzo(carburante="benzina", valore=1.85,
+                                     self_service=True, comunicato_il=quando)
+        return i
+
+    def test_l_eta_si_misura_dall_istante_che_si_passa(self):
+        dato = datetime(2026, 8, 6, 8, 0, 0)
+        rep = build_report(self._cfg(), [self._impianto(dato)], dato,
+                           adesso=dato + timedelta(hours=10))
+
+        self.assertAlmostEqual(rep["misure_di_controllo"]["eta_file_ore"], 10.0, places=1)
+        self.assertEqual(rep["esito_pubblicazione"], "ok")
+
+    def test_lo_stesso_dato_oltre_soglia_blocca(self):
+        dato = datetime(2026, 8, 6, 8, 0, 0)
+        rep = build_report(self._cfg(), [self._impianto(dato)], dato,
+                           adesso=dato + timedelta(hours=49))
+
+        self.assertEqual(rep["esito_pubblicazione"], "bloccata")
+
+    def test_senza_istante_si_usa_l_orologio_come_prima(self):
+        dato = datetime.now().replace(microsecond=0)
+        rep = build_report(self._cfg(), [self._impianto(dato)], dato)
+
+        self.assertLess(rep["misure_di_controllo"]["eta_file_ore"], 24)
+
+
+class TestAvvisiVisibili(unittest.TestCase):
+    """Gli avvisi che nessuno legge non esistono.
+
+    Quando lo storico manca, R4 non scatta e i salti di prezzo passano tutti. Oggi la
+    pipeline lo dice su stderr e il job riesce lo stesso: in mezzo a mille righe di log
+    non se ne accorge nessuno. Su GitHub esiste un modo per farlo vedere davvero — le
+    annotazioni — e costa una riga.
+    """
+
+    def test_in_ci_l_avviso_diventa_un_annotazione(self):
+        with mock.patch.dict("os.environ", {"GITHUB_ACTIONS": "true"}):
+            with mock.patch("sys.stderr", new_callable=io.StringIO) as uscita:
+                pipeline.avvisa("lo storico non c'era")
+
+        self.assertTrue(uscita.getvalue().startswith("::warning::"))
+        self.assertIn("lo storico non c'era", uscita.getvalue())
+
+    def test_fuori_dalla_ci_resta_una_riga_leggibile(self):
+        with mock.patch.dict("os.environ", {}, clear=True):
+            with mock.patch("sys.stderr", new_callable=io.StringIO) as uscita:
+                pipeline.avvisa("lo storico non c'era")
+
+        self.assertFalse(uscita.getvalue().startswith("::warning::"))
+        self.assertIn("lo storico non c'era", uscita.getvalue())
+
+
+def build_report(cfg, impianti, dato, adesso=None):
+    conteggi = {r[0]: 0 for r in REGOLE}
+    return report.genera(impianti, conteggi, cfg, dato, "prova", adesso=adesso)
 
 
 if __name__ == "__main__":

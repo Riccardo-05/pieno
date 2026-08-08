@@ -10,9 +10,15 @@ from pieno_pipeline.geo import sembra_invertita, distanza_metri
 from pieno_pipeline.model import Impianto, Prezzo, normalizza_carburante
 from pieno_pipeline.validation import valida, normalizza_marchio
 
-# Ancorato a "adesso" (non a una data fissa) così il report vede il file come fresco:
-# la freschezza è assoluta (now - data_dato), gli altri controlli sono relativi a OGGI.
-OGGI = datetime.now().replace(microsecond=0)
+# Data fissa. Prima era ancorata a `datetime.now()`, per un motivo che sembrava buono:
+# la freschezza del report è assoluta, quindi con una data del passato il file di prova
+# sarebbe risultato scaduto. Il prezzo però era che l'esito dei test dipendeva
+# dall'orologio e dal fuso della macchina — ed è così che il job del 6 agosto 2026 è
+# fallito in CI (runner in UTC) mentre in locale passava, bloccando la pubblicazione.
+#
+# Ora l'istante si passa a `report.genera(adesso=...)`, quindi le date possono stare
+# ferme e i test dicono sempre la stessa cosa, ovunque girino.
+OGGI = datetime(2026, 8, 6, 8, 0, 0)
 CFG = carica()
 
 
@@ -93,7 +99,9 @@ class TestReport(unittest.TestCase):
     def _report(self, storico):
         imp = impianto("r", 45.46, 9.19, {"benzina": 1.80})
         conteggi = valida({"r": imp}, CFG, OGGI, storico=storico)
-        return report.genera([imp], conteggi, CFG, OGGI, "test", storico=storico)
+        # Un'ora dopo il dato: il file è fresco per costruzione, non perché è oggi.
+        return report.genera([imp], conteggi, CFG, OGGI, "test", storico=storico,
+                             adesso=OGGI + timedelta(hours=1))
 
     def test_storico_assente_segnalato(self):
         misure = self._report(None)["misure_di_controllo"]

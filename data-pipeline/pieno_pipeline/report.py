@@ -34,7 +34,17 @@ def _adesso_italia() -> datetime:
 def genera(impianti: Iterable[Impianto], conteggi: Dict[str, int], cfg: Config,
            data_riferimento: datetime, ver: str,
            storico: Optional[Dict[str, Dict[str, float]]] = None,
-           data_letta: bool = True) -> dict:
+           data_letta: bool = True,
+           adesso: Optional[datetime] = None) -> dict:
+    """Report di qualità. `adesso` serve alle prove: in esercizio resta l'orologio.
+
+    Finché l'unico «adesso» era l'orologio di sistema, i test dovevano ancorarsi a
+    `datetime.now()` per non far risultare vecchissimo il file di prova — e così il loro
+    esito dipendeva dal fuso della macchina. È esattamente così che il job del 6 agosto
+    2026 è fallito in CI (runner in UTC, freschezza misurata in ora italiana) mentre in
+    locale passava: un test che misura il tempo con l'orologio del muro non verifica il
+    codice, verifica dove gira.
+    """
     lista = list(impianti)
     validi = [i for i in lista if i.valido and i.prezzi]
 
@@ -45,7 +55,8 @@ def genera(impianti: Iterable[Impianto], conteggi: Dict[str, int], cfg: Config,
     # un giorno e la sua intestazione non porta l'ora — la motivazione, con le misure, sta
     # in config.yaml e in linee-guida/05-dati-e-qualita.md.
     limite_ore = cfg.qualita.eta_massima_file_ore
-    eta_file_ore = max(0.0, (_adesso_italia() - data_riferimento).total_seconds() / 3600.0)
+    ora = adesso or _adesso_italia()
+    eta_file_ore = max(0.0, (ora - data_riferimento).total_seconds() / 3600.0)
     dataset_fresco = eta_file_ore < limite_ore
     freschezza_pct = 100.0 if dataset_fresco else 0.0
     # Ogni impianto mostrato ha un'età (quella del file): 0 senza età se il file è datato.
