@@ -380,6 +380,60 @@ class TestAvvisiVisibili(unittest.TestCase):
         self.assertIn("lo storico non c'era", uscita.getvalue())
 
 
+class TestConsoleWindows(unittest.TestCase):
+    """La pipeline deve poter girare sulla macchina di chi la scrive.
+
+    Scaricava, validava e deduplicava ventimila impianti, poi moriva sull'ultima riga
+    stampata: la console Windows usa cp1252 e non sa scrivere `→` né `·`. Su Linux, dove
+    gira la CI, non si vedeva — quindi il difetto è rimasto lì mentre dalla macchina di
+    casa il job non poteva concludersi a nessuna ora.
+    """
+
+    def _console_cp1252(self):
+        return io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+
+    def test_una_freccia_non_fa_cadere_una_console_cp1252(self):
+        console = self._console_cp1252()
+
+        with mock.patch("sys.stdout", console):
+            pipeline.configura_uscita()
+            print("Età del file: 1.3 h (limite 48 h) → esito ok")
+            print("Mostrati 21181 · scartati 2682")
+
+        console.flush()  # nessuna eccezione: è tutto quello che serve
+
+    def test_senza_configurare_la_stessa_riga_esplode(self):
+        """Controprova: è davvero la console a rifiutare quei caratteri."""
+        console = self._console_cp1252()
+
+        with self.assertRaises(UnicodeEncodeError):
+            console.write("→")
+            console.flush()
+
+    def test_su_uno_stream_che_non_si_puo_riconfigurare_non_si_lamenta(self):
+        with mock.patch("sys.stdout", io.StringIO()):
+            pipeline.configura_uscita()  # StringIO non ha reconfigure: si tira dritto
+
+
+class TestMessaggioDiBlocco(unittest.TestCase):
+    """Quando la build si blocca, dire la cosa che serve sapere.
+
+    «Pubblicazione bloccata dal report di qualità» è vero e inutile: non dice che il file
+    è quello di ieri, e che riprovare fra un minuto darà lo stesso esito.
+    """
+
+    def test_il_blocco_spiega_l_eta_e_cosa_aspettarsi(self):
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as uscita:
+            pipeline.spiega_blocco(eta_ore=49.6, limite_ore=48)
+
+        testo = uscita.getvalue()
+        self.assertIn("49.6", testo)
+        self.assertIn("48", testo)
+        self.assertIn("--forza", testo)
+        # La cosa che mancava: perché riprovare adesso non serve.
+        self.assertRegex(testo.lower(), r"ministero|domani|nuovo file")
+
+
 def build_report(cfg, impianti, dato, adesso=None):
     conteggi = {r[0]: 0 for r in REGOLE}
     return report.genera(impianti, conteggi, cfg, dato, "prova", adesso=adesso)

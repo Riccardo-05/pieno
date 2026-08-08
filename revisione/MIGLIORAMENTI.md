@@ -65,13 +65,19 @@ Chiuso l'8 agosto 2026. 45 test nella pipeline, verdi in tre fusi orari.
 
 ## Gruppo 3 · La pipeline deve girare sulla macchina di chi la scrive
 
-- [ ] **3.1 — `UnicodeEncodeError` su Windows.** La pipeline scarica, valida, deduplica
-  ventimila impianti e poi muore sull'ultima `print`, perché la console Windows usa
-  cp1252 e non sa stampare `→` e `·`. Su Linux, dove gira la CI, non si vede. Effetto
-  pratico: dalla macchina di casa il job **non può concludersi**, a nessuna ora.
-- [ ] **3.2 — Quando la build è bloccata, dirlo in modo utile.** Oggi stampa
-  «Pubblicazione bloccata dal report di qualità». Non dice la cosa che serve sapere: che
-  il file è quello di ieri, e che riprovare adesso non cambierà niente.
+- [x] **3.1 — `UnicodeEncodeError` su Windows.** `configura_uscita()` in `main()`: si
+  tiene la codifica della console e si sostituiscono i caratteri che non ci stanno.
+  Forzare UTF-8 su un terminale cp1252 non lo migliora, lo riempie di scarabocchi; un
+  riepilogo con un `?` al posto di una freccia resta leggibile, un riepilogo che non
+  arriva mai no. **Provato sul campo:** la pipeline gira ora fino in fondo e pubblica,
+  uscita `0`, senza `PYTHONIOENCODING`.
+- [x] **3.2 — Quando la build è bloccata, dirlo in modo utile.** `spiega_blocco()` dice
+  l'età del dato, il limite, che **non è un guasto**, e — la cosa che serviva davvero —
+  che riprovare adesso darà lo stesso esito perché il file nuovo arriva domattina.
+  Provato sul campo con un dato di tre giorni: *«il dato ha 98.2 h, oltre il limite di
+  48 h»*.
+
+Chiuso l'8 agosto 2026. 49 test nella pipeline, verdi.
 
 ## Gruppo 4 · Privacy e superficie del servizio percorsi
 
@@ -102,3 +108,4 @@ Chiuso l'8 agosto 2026. 45 test nella pipeline, verdi in tre fusi orari.
 | --- | --- | --- |
 | 8 ago 2026 | Gruppo 1 · integrità e scaricamento condizionale | ✅ 4 voci su 4, 74 test verdi |
 | 8 ago 2026 | Gruppo 2 · i guasti si fanno sentire | ✅ 3 voci su 3, 45 test verdi in tre fusi |
+| 8 ago 2026 | Gruppo 3 · la pipeline gira su Windows | ✅ 2 voci su 2, provate sul campo |

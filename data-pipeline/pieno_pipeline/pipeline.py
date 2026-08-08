@@ -23,6 +23,46 @@ from .config import carica
 from .geo import ConfiniComunali
 
 
+def configura_uscita() -> None:
+    """Fa in modo che un carattere non stampabile non uccida un'ora di lavoro.
+
+    La console di Windows usa cp1252, che non conosce `→` né `·`. La pipeline scaricava,
+    validava e deduplicava ventimila impianti, poi moriva sull'ultima riga stampata: su
+    Linux — dove gira la CI — non si vedeva, quindi il difetto è rimasto lì mentre dalla
+    macchina di casa il job non poteva concludersi a nessuna ora.
+
+    Si tiene la codifica della console e si sostituiscono i caratteri che non ci stanno:
+    forzare UTF-8 su un terminale cp1252 non lo migliora, lo riempie di scarabocchi. Un
+    riepilogo con un punto interrogativo al posto di una freccia resta leggibile; un
+    riepilogo che non arriva mai, no.
+    """
+    for flusso in (sys.stdout, sys.stderr):
+        try:
+            flusso.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass  # non è un flusso di testo riconfigurabile: va bene lo stesso
+
+
+def spiega_blocco(eta_ore: float, limite_ore: float) -> None:
+    """Dice perché la pubblicazione si è fermata, e cosa aspettarsi.
+
+    «Pubblicazione bloccata dal report di qualità» è vero e inutile: chi lo legge non sa
+    se ha sbagliato qualcosa, se deve riprovare, o se deve aspettare. Quasi sempre la
+    risposta è la terza, perché il file ministeriale nasce già vecchio di un giorno e
+    invecchia di altre ventiquattr'ore prima che ne esca uno nuovo.
+    """
+    print(
+        f"Pubblicazione bloccata: il dato ha {eta_ore} h, oltre il limite di "
+        f"{limite_ore:.0f} h.\n"
+        "Non è un guasto: il file del Ministero contiene i prezzi del giorno prima e "
+        "invecchia fino alla pubblicazione successiva (verso le 06:45 UTC). Riprovare "
+        "adesso darà lo stesso esito — il nuovo file arriva domattina.\n"
+        "Con `--forza` si pubblica lo stesso, dichiarando dati che sappiamo scaduti "
+        "(sconsigliato).",
+        file=sys.stderr,
+    )
+
+
 def avvisa(messaggio: str) -> None:
     """Un avviso che si vede anche quando nessuno sta leggendo il log.
 
@@ -113,8 +153,7 @@ def esegui(args: argparse.Namespace) -> int:
 
     # --- pubblicazione atomica (solo se il report supera le soglie) ----------------
     if rep["esito_pubblicazione"] != "ok" and not args.forza:
-        print("Pubblicazione bloccata dal report di qualità. Uso --forza per ignorare (sconsigliato).",
-              file=sys.stderr)
+        spiega_blocco(m["eta_file_ore"], m["eta_massima_file_ore"])
         build.costruisci(impianti.values(), cfg, ver, data_dato, fattori)  # staging, non pubblicato
         report.scrivi(rep, cfg)
         return 1
@@ -127,6 +166,7 @@ def esegui(args: argparse.Namespace) -> int:
 
 
 def main(argv=None) -> int:
+    configura_uscita()
     p = argparse.ArgumentParser(description="Pipeline dati Pieno — Tappa 01.")
     p.add_argument("--config", default=None, help="Percorso a config.yaml")
     p.add_argument("--scarica", action="store_true", help="Scarica dalle URL di config.yaml")
