@@ -90,7 +90,7 @@ class VicinoATeScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         const Align(alignment: Alignment.centerLeft, child: OrdinamentoShortcut()),
         const SizedBox(height: 12),
-        if (!esito.origineRete) _bannerOffline(dati),
+        if (!esito.corrente) _bannerOffline(dati),
         Expanded(
           child: elenco.isEmpty
               ? _statoSenzaRisultati(carburante)

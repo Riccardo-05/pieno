@@ -12,6 +12,8 @@
 // mentre scriveva non deve impedire l'avvio, deve solo essere buttata.
 
 import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/impianto.dart';
@@ -32,15 +34,43 @@ class ProvinceRepository {
   final http.Client _client;
 
   /// Carica una provincia: prova la rete, ricade sulla cache.
-  /// [origineRete] indica se il dato viene dalla rete (true) o dal disco (false).
-  Future<(DatiProvincia?, bool origineRete)> caricaProvincia(String sigla) async {
-    final dallaRete = await _scarica('province/$sigla.json', DatiProvincia.fromJson);
+  ///
+  /// [impronta] è lo `sha256` che il manifest dichiara per questo file. Serve a due
+  /// cose che prima non si facevano nonostante il manifest lo pubblicasse da sempre.
+  ///
+  /// **Non riscaricare l'uguale.** Se la copia sul telefono ha già quell'impronta è
+  /// esattamente il file che il server servirebbe: scaricare milletrecento impianti per
+  /// riottenere gli stessi byte è tempo dell'utente e traffico suo.
+  ///
+  /// **Non credere a ciò che non torna.** Un file troncato a metà scaricamento può
+  /// restare JSON valido, e senza confronto verrebbe salvato e mostrato come buono.
+  ///
+  /// Il secondo valore dice se il dato è **corrente**, non se è passato per la rete:
+  /// una copia locale che corrisponde al manifest è aggiornata quanto un download, e
+  /// non va raccontata all'utente come un ripiego.
+  Future<(DatiProvincia?, bool corrente)> caricaProvincia(String sigla,
+      {String? impronta}) async {
+    if (impronta != null) {
+      final salvato = await _store.leggiProvincia(sigla);
+      if (salvato != null && _improntaDi(salvato) == impronta) {
+        try {
+          return (DatiProvincia.fromJson(_json(salvato)), true);
+        } catch (_) {
+          await _store.rimuoviProvincia(sigla);
+        }
+      }
+    }
+
+    final dallaRete = await _scarica('province/$sigla.json', DatiProvincia.fromJson,
+        impronta: impronta);
     if (dallaRete != null) {
       await _store.salvaProvincia(sigla, dallaRete.grezzo);
       return (dallaRete.valore, true);
     }
     return (await _dallaCache(sigla, DatiProvincia.fromJson), false);
   }
+
+  String _improntaDi(String testo) => sha256.convert(utf8.encode(testo)).toString();
 
   /// Carica il manifest (elenco province + baricentri): rete → cache.
   Future<Manifest?> caricaManifest() async {
@@ -56,12 +86,14 @@ class ProvinceRepository {
   /// è 200 o quando il corpo non è il file che ci aspettiamo: in tutti e tre i casi
   /// chi chiama ripiega sulla cache, che qui non è ancora stata toccata.
   Future<_Scaricato<T>?> _scarica<T>(
-      String risorsa, T Function(Map<String, dynamic>) leggi) async {
+      String risorsa, T Function(Map<String, dynamic>) leggi,
+      {String? impronta}) async {
     try {
       final resp = await _client
           .get(Uri.parse('$baseUrl/$risorsa'))
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) return null;
+      if (impronta != null && _improntaDi(resp.body) != impronta) return null;
       return _Scaricato(leggi(_json(resp.body)), resp.body);
     } catch (_) {
       // Rete assente, stato storto o corpo illeggibile: si prosegue con la cache.

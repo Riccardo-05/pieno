@@ -71,18 +71,25 @@ final provinciaProvider = Provider<String>((ref) {
   return kProvinciaDefault;
 });
 
-/// Esito del caricamento: i dati + se provengono dalla rete o dalla cache.
+/// Esito del caricamento: i dati + se sono **quelli correnti**.
+///
+/// Non «vengono dalla rete»: una copia sul telefono che corrisponde all'impronta del
+/// manifest è il file che il server servirebbe, byte per byte. Chiamarla ripiego
+/// significherebbe avvisare l'utente di un problema che non ha.
 class EsitoDati {
   final DatiProvincia? dati;
-  final bool origineRete;
-  const EsitoDati(this.dati, this.origineRete);
+  final bool corrente;
+  const EsitoDati(this.dati, this.corrente);
 }
 
 final datiProvinciaProvider = FutureProvider<EsitoDati>((ref) async {
   final repo = ref.watch(repositoryProvider);
   final sigla = ref.watch(provinciaProvider);
-  final (dati, rete) = await repo.caricaProvincia(sigla);
-  return EsitoDati(dati, rete);
+  // L'impronta dichiarata dal manifest, quando lo si è potuto leggere: con quella si
+  // evita di riscaricare un file identico e si scarta un download che non torna.
+  final impronta = ref.watch(manifestProvider).valueOrNull?.voceDi(sigla)?.sha256;
+  final (dati, corrente) = await repo.caricaProvincia(sigla, impronta: impronta);
+  return EsitoDati(dati, corrente);
 });
 
 // ---- Impostazioni (Tappa 05), persistite su SharedPreferences. ----

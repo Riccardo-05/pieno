@@ -40,12 +40,20 @@ class VoceProvincia {
   /// Estensione della provincia. Null sui manifest salvati prima che esistesse.
   final Riquadro? riquadro;
 
+  /// Impronta `sha256` del file di provincia, dichiarata dalla pipeline.
+  ///
+  /// La pipeline la pubblica da sempre; l'app non la leggeva. Con questa si evita di
+  /// riscaricare un file identico a quello che si ha già, e si smette di credere a un
+  /// download che non corrisponde a ciò che era stato promesso.
+  final String? sha256;
+
   const VoceProvincia({
     required this.sigla,
     required this.impianti,
     required this.lat,
     required this.lon,
     this.riquadro,
+    this.sha256,
   });
 
   factory VoceProvincia.fromJson(Map<String, dynamic> j) {
@@ -56,6 +64,7 @@ class VoceProvincia {
       lat: (centro?['lat'] as num?)?.toDouble(),
       lon: (centro?['lon'] as num?)?.toDouble(),
       riquadro: Riquadro.fromJson(j['riquadro'] as Map<String, dynamic>?),
+      sha256: j['sha256'] as String?,
     );
   }
 }
@@ -72,6 +81,14 @@ class Manifest {
             .map((e) => VoceProvincia.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
+
+  /// La voce di una provincia, o null se il manifest non la conosce.
+  VoceProvincia? voceDi(String sigla) {
+    for (final p in province) {
+      if (p.sigla == sigla) return p;
+    }
+    return null;
+  }
 
   /// Sigla della provincia a cui appartiene (lat, lon), o null se il manifest non ha
   /// coordinate.

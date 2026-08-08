@@ -5,8 +5,10 @@
 // La promessa del README è una sola: «Se il file del giorno è rotto, l'app continua a
 // servire quello buono del giorno prima». Questi test la tengono onesta.
 
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -91,6 +93,78 @@ void main() {
 
       expect(esito.$1, isNotNull);
       expect(esito.$2, isFalse);
+    });
+  });
+
+  group('impronta del manifest', () {
+    String improntaDi(String testo) => sha256.convert(utf8.encode(testo)).toString();
+
+    test('se la copia locale è già quella dichiarata, la rete non si tocca', () async {
+      await LocalStore().salvaProvincia('MI', _provinciaBuona);
+      var chiamate = 0;
+      final repo = ProvinceRepository(
+        baseUrl: 'https://prova',
+        client: MockClient((_) async {
+          chiamate++;
+          return http.Response(_provinciaBuona, 200);
+        }),
+      );
+
+      final esito = await repo.caricaProvincia('MI', impronta: improntaDi(_provinciaBuona));
+
+      expect(chiamate, 0, reason: 'scaricare 1300 impianti identici è lavoro sprecato');
+      expect(esito.$1, isNotNull);
+      expect(esito.$2, isTrue, reason: 'il dato corrisponde al manifest: è corrente');
+    });
+
+    test('se la copia locale è vecchia si scarica', () async {
+      await LocalStore().salvaProvincia('MI', '{"versione":"0","provincia":"MI","impianti":[]}');
+      var chiamate = 0;
+      final repo = ProvinceRepository(
+        baseUrl: 'https://prova',
+        client: MockClient((_) async {
+          chiamate++;
+          return http.Response(_provinciaBuona, 200);
+        }),
+      );
+
+      final esito = await repo.caricaProvincia('MI', impronta: improntaDi(_provinciaBuona));
+
+      expect(chiamate, 1);
+      expect(esito.$2, isTrue);
+    });
+
+    test('un file che non corrisponde alla sua impronta non viene creduto', () async {
+      await LocalStore().salvaProvincia('MI', _provinciaBuona);
+      // Il server risponde 200 con un file troncato che resta JSON valido.
+      const troncato = '{"versione":"1","provincia":"MI","impianti":[]}  ';
+      final repo = ProvinceRepository(
+        baseUrl: 'https://prova',
+        client: MockClient((_) async => http.Response(troncato, 200)),
+      );
+
+      final esito = await repo.caricaProvincia('MI', impronta: improntaDi('altro contenuto'));
+
+      expect(esito.$1, isNotNull, reason: 'resta la copia buona');
+      expect(esito.$2, isFalse, reason: 'e si dichiara che non è quella corrente');
+      expect(await LocalStore().leggiProvincia('MI'), _provinciaBuona,
+          reason: 'il file storto non deve finire sul disco');
+    });
+
+    test('senza impronta ci si comporta come prima', () async {
+      var chiamate = 0;
+      final repo = ProvinceRepository(
+        baseUrl: 'https://prova',
+        client: MockClient((_) async {
+          chiamate++;
+          return http.Response(_provinciaBuona, 200);
+        }),
+      );
+
+      final esito = await repo.caricaProvincia('MI');
+
+      expect(chiamate, 1);
+      expect(esito.$2, isTrue);
     });
   });
 
