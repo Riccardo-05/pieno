@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../models/navigatore.dart';
+import '../../domain/formato.dart';
 import '../../state/app_state.dart';
 import '../components/carburante_selettore.dart';
 import '../components/dissolvenza.dart';
@@ -207,9 +208,7 @@ class ImpostazioniScreen extends ConsumerWidget {
   String _ultimoAggiornamento(WidgetRef ref) {
     final quando = ref.watch(datiProvinciaProvider).valueOrNull?.dati?.datoDel;
     if (quando == null) return 'non disponibile';
-    String due(int n) => n.toString().padLeft(2, '0');
-    return '${due(quando.day)}/${due(quando.month)}/${quando.year}'
-        ', ore ${due(quando.hour)}:${due(quando.minute)}';
+    return formattaDataOra(quando);
   }
 
   /// Cancella zone salvate, preferenze, segnalazioni e valutazioni: quanto promesso
