@@ -152,10 +152,9 @@ porta aperta sul modem, IP di casa invisibile, certificati automatici.
 Verificato dall'esterno: `/v1/salute` risponde con certificato valido, `/route` e `/table`
 danno 404 — il motore non è esposto.
 
-La procedura completa, con i due inciampi d'ambiente in cui siamo incappati (la porta 5000
-che Windows si riprende, e `cloudflared service install` che registra il servizio senza
-dirgli cosa eseguire), è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md). Qui sotto
-resta il riassunto, per rifarla da zero.
+Due inciampi d'ambiente in cui siamo incappati, e che si ripresentano rifacendola da zero:
+la porta 5000 che Windows si riprende, e `cloudflared service install` che registra il
+servizio senza dirgli cosa eseguire. Qui sotto il riassunto della procedura.
 
 ```powershell
 cloudflared tunnel login                      # apre il browser, scegli la zona

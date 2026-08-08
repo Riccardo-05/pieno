@@ -45,7 +45,7 @@ strada e risparmio al netto della deviazione; quando il server non c'è ricade s
 e lo dichiara.
 
 La procedura di messa in servizio, con le verifiche e i due inciampi d'ambiente in cui
-siamo incappati, è in [`../PASSI-DA-SEGUIRE.md`](../PASSI-DA-SEGUIRE.md).
+siamo incappati, è riassunta in [`../percorsi/README.md`](../percorsi/README.md).
 
 Il **costo della deviazione** non è più «da definire»: la formula è `costoDeviazione()` in
 `app/lib/domain/risparmio.dart`, e la voce «Consumo medio» è nel gruppo Rifornimento.
